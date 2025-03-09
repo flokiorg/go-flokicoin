@@ -148,8 +148,8 @@ type Address interface {
 // public key, the address will be associated with the passed defaultNet.
 func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 	// Bech32 encoded segwit addresses start with a human-readable part
-	// (hrp) followed by '1'. For Flokicoin mainnet the hrp is "bc", and for
-	// testnet it is "tb". If the address string has a prefix that matches
+	// (hrp) followed by '1'. For Flokicoin mainnet the hrp is "fc", and for
+	// testnet it is "tf". If the address string has a prefix that matches
 	// one of the prefixes for the known networks, we try to decode it as
 	// a segwit address.
 	oneIndex := strings.LastIndexByte(addr, '1')

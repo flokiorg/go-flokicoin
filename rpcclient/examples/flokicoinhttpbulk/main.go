@@ -19,8 +19,8 @@ func main() {
 		User:                "yourrpcuser",
 		Pass:                "yourrpcpass",
 		DisableConnectOnNew: true,
-		HTTPPostMode:        true, // Flokicoin core only supports HTTP POST mode
-		DisableTLS:          true, // Flokicoin core does not provide TLS by default
+		HTTPPostMode:        true, // Flokicoin only supports HTTP POST mode
+		DisableTLS:          true, // Flokicoin does not provide TLS by default
 	}
 	batchClient, err := rpcclient.NewBatch(connCfg)
 	defer batchClient.Shutdown()

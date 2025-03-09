@@ -19,8 +19,8 @@ func main() {
 		Host:         "unix:///tmp/test.XXXX",
 		User:         "yourrpcuser",
 		Pass:         "yourrpcpass",
-		HTTPPostMode: true, // Flokicoin core only supports HTTP POST mode.
-		DisableTLS:   true, // Flokicoin core does not provide TLS by default.
+		HTTPPostMode: true, // Flokicoin only supports HTTP POST mode.
+		DisableTLS:   true, // Flokicoin does not provide TLS by default.
 	}
 
 	// Notice the notification parameter is nil since notifications are
