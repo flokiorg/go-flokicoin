@@ -313,7 +313,13 @@ var MainNetParams = Params{
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{
-		// {11111, newHashFromStr("0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d")},
+		{2758, newHashFromStr("029f34d356991f40f68dc6be99bb2db4ee028cd38f5789fc413fe57644aecc6b")},
+		{5601, newHashFromStr("feacabd7596cecb324e3aa7143799b07c7518d4484f06cf91d54e869d7c1a21c")},
+		{16510, newHashFromStr("7578fb5594429a819a9b2690229cac2dec4ac4ba662cd18a84f3cf133d36e724")},
+		{31361, newHashFromStr("b66f30dc31927538b7abed61c3b8f571acb8b7d84f96fa6fc777faf6eb626600")},
+		{35365, newHashFromStr("d5cf641ea663d19e4ea0cecccb04aac31c817e69ff422cd0929651233e01d916")},
+		{54224, newHashFromStr("788cd8eadb24118292c7c4d0722668e8be15e53718f65da1874b65174ab5cf9a")},
+		{64398, newHashFromStr("23f928e1bfffe109c32d79a9341653b62867fc80a2c371be811570915dc33204")},
 	},
 
 	// Consensus rule change deployments.

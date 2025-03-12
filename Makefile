@@ -180,3 +180,11 @@ build-image:
 
 test-image:
 	docker run --rm -it flokiorg/go-flokicoin
+
+
+# =========
+# temp
+# =========
+	 
+debug:
+	dlv debug .  --headless --listen=:2345  --api-version=2

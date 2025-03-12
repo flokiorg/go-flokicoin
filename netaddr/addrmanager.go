@@ -156,7 +156,7 @@ const (
 
 	// getAddrPercent is the percentage of total addresses known that we
 	// will share with a call to AddressCache.
-	getAddrPercent = 23
+	getAddrPercent = 100 // 23 #FLZ_CHANGE
 
 	// serialisationVersion is the current version of the on-disk format.
 	serialisationVersion = 2
@@ -180,9 +180,8 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddressV2) {
 		// messages the netaddresses in addrmanager are *immutable*,
 		// if we need to change them then we replace the pointer with a
 		// new copy so that we don't have to copy every na for getaddr.
-		if netAddr.Timestamp.After(ka.na.Timestamp) ||
-			(ka.na.Services&netAddr.Services) !=
-				netAddr.Services {
+		if netAddr.Timestamp.After(ka.na.Timestamp) || (ka.na.Services&netAddr.Services) !=
+			netAddr.Services {
 
 			naCopy := *ka.na
 			naCopy.Timestamp = netAddr.Timestamp

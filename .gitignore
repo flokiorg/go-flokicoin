@@ -52,3 +52,6 @@ chainutil/psbt/coverage.txt
 /flokicoind
 /findcheckpoint
 /gencerts
+
+
+.vscode
