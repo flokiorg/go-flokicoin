@@ -13,7 +13,7 @@ represent real money and introducing bugs and security vulnerabilities can have
 far more dire consequences than in typical projects where having a small bug is
 minimal by comparison.  In the world of cryptocurrencies, even the smallest bug
 in the wrong area can cost people a significant amount of money.  For this
-reason, the flokicoind suite has a formalized and rigorous development process which
+reason, the flokicoin has a formalized and rigorous development process which
 is outlined on this page.
 
 We highly encourage code contributions, however it is imperative that you adhere
@@ -45,8 +45,7 @@ security and performance implications.
 
 ## Required Reading
 
-- [Effective Go](http://golang.org/doc/effective_go.html) - The entire flokicoind
-  suite follows the guidelines in this document.  For your code to be accepted,
+- [Effective Go](http://golang.org/doc/effective_go.html) - The entire flokicoind follows the guidelines in this document.  For your code to be accepted,
   it must follow the guidelines therein.
 - [Original Satoshi Whitepaper](http://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&ved=0CCkQFjAA&url=http%3A%2F%2Fbitcoin.org%2Fbitcoin.pdf&ei=os3VUuH8G4SlsASV74GoAg&usg=AFQjCNEipPLigou_1MfB7DQjXCNdlylrBg&sig2=FaHDuT5z36GMWDEnybDJLg&bvm=bv.59378465,d.b2I) - This is the white paper that started it all.  Having a solid
   foundation to build on will make the code much more comprehensible.
@@ -316,4 +315,4 @@ Rejoice as you will now be listed as a [contributor](https://github.com/flokiorg
 
 All contributions must be licensed with the
 [ISC license](https://github.com/flokiorg/go-flokicoin/blob/master/LICENSE).  This is
-the same license as all of the code in the flokicoind suite.
+the same license as all of the code in the flokicoin.

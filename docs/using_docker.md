@@ -12,7 +12,7 @@
 
 ## Introduction
 
-With Docker you can easily set up *flokicoind* to run your Bitcoin full node. You can find the official *flokicoind* Docker images on Docker Hub [btcsuite/flokicoind](https://hub.docker.com/r/btcsuite/flokicoind). The Docker source file of this image is located at [Dockerfile](https://github.com/flokiorg/go-flokicoin/blob/master/Dockerfile).
+With Docker you can easily set up *flokicoind* to run your Bitcoin full node. The Docker source file of this image is located at [Dockerfile](https://github.com/flokiorg/go-flokicoin/blob/master/docker/Dockerfile).
 
 This documentation focuses on running Docker container with *docker-compose.yml* files. These files are better to read and you can use them as a template for your own use. For more information about Docker and Docker compose visit the official [Docker documentation](https://docs.docker.com/).
 

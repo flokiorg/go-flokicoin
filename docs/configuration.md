@@ -129,9 +129,6 @@ on the last time it was updated.
 See [this](https://bitcointalk.org/index.php?topic=145386.0) thread on
 bitcointalk for more details.
 
-**NOTE:** Using bootstrap.dat is entirely optional.  Btcd will download the
-block chain from other peers through the Bitcoin protocol with no extra
-configuration needed.
 
 ### What are the pros and cons of using bootstrap.dat?
 
@@ -180,7 +177,7 @@ and we prefer to keep the daemon itself as lightweight as possible.
 **Windows:**
 
 ```bat
-"%PROGRAMFILES%\Btcd Suite\Btcd\addblock" -i C:\Path\To\bootstrap.dat
+"%PROGRAMFILES%\flokicoind\addblock" -i C:\Path\To\bootstrap.dat
 ```
 
 **Linux/Unix/BSD/POSIX:**

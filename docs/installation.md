@@ -7,32 +7,20 @@ details on how to install on the supported operating systems.
 
 [Go](http://golang.org) 1.17 or newer.
 
-## GPG Verification Key
-
-All official release tags are signed by Conformal so users can ensure the code
-has not been tampered with and is coming from The btcsuite developers.  To
-verify the signature perform the following:
-
-* Download the Conformal public key:
-  https://raw.githubusercontent.com/btcsuite/flokicoind/master/release/GIT-GPG-KEY-conformal.txt
-
-* Import the public key into your GPG keyring:
-
-  ```bash
-  gpg --import GIT-GPG-KEY-conformal.txt
-  ```
-
-* Verify the release tag with the following command where `TAG_NAME` is a
-  placeholder for the specific tag:
-
-  ```bash
-  git tag -v TAG_NAME
-  ```
 
 ## Windows Installation
 
-* Install the MSI available at: [flokicoind windows installer](https://github.com/flokiorg/go-flokicoin/releases)
-* Launch flokicoind from the Start Menu
+Currently, there is no MSI installer available for flokicoin. The `flokicoind` executable can be directly downloaded from the latest release page:
+
+[flokicoind Releases](https://github.com/flokiorg/go-flokicoin/releases)
+
+### Instructions:
+
+1. **Download** the executable (`flokicoind.exe`) from the provided release link.
+2. **Place** the executable in your preferred directory.
+3. **Launch** `flokicoind.exe` by double-clicking the file or executing it via Command Prompt.
+
+> **Note:** An official MSI installer is planned and will be available in an upcoming release.
 
 ## Linux/BSD/MacOSX/POSIX Installation
 
@@ -61,11 +49,6 @@ go install -v . ./cmd/...
   not already add the bin directory to your system path during Go installation,
   we recommend you do so now.
 
-## Gentoo Linux Installation
-
-* [Install Layman](https://gitlab.com/bitcoin/gentoo) and enable the Bitcoin overlay.
-* Copy or symlink `/var/lib/layman/bitcoin/Documentation/package.keywords/flokicoind-live` to `/etc/portage/package.keywords/`
-* Install flokicoind: `$ emerge net-p2p/flokicoind`
 
 ## Startup
 

@@ -1,37 +1,37 @@
 # Developer Resources
 
-* [Code Contribution Guidelines](https://github.com/flokiorg/go-flokicoin/tree/master/docs/code_contribution_guidelines.md)
+* [Code Contribution Guidelines](https://github.com/flokiorg/go-flokicoin/tree/main/docs/code_contribution_guidelines.md)
 
-* [JSON-RPC Reference](https://github.com/flokiorg/go-flokicoin/tree/master/docs/json_rpc_api.md)
-  * [RPC Examples](https://github.com/flokiorg/go-flokicoin/tree/master/docs/json_rpc_api.md#ExampleCode)
+* [JSON-RPC Reference](https://github.com/flokiorg/go-flokicoin/tree/main/docs/json_rpc_api.md)
+  * [RPC Examples](https://github.com/flokiorg/go-flokicoin/tree/main/docs/json_rpc_api.md#ExampleCode)
 
-* The btcsuite Bitcoin-related Go Packages:
-  * [btcrpcclient](https://github.com/flokiorg/go-flokicoin/tree/master/rpcclient) - Implements a
+* The go-flokicoin related Go Packages:
+  * [rpcclient](https://github.com/flokiorg/go-flokicoin/tree/main/rpcclient) - Implements a
     robust and easy to use Websocket-enabled Bitcoin JSON-RPC client
-  * [btcjson](https://github.com/flokiorg/go-flokicoin/tree/master/btcjson) - Provides an extensive API
+  * [chainjson](https://github.com/flokiorg/go-flokicoin/tree/main/chainjson) - Provides an extensive API
     for the underlying JSON-RPC command and return values
-  * [wire](https://github.com/flokiorg/go-flokicoin/tree/master/wire) - Implements the
+  * [wire](https://github.com/flokiorg/go-flokicoin/tree/main/wire) - Implements the
     Bitcoin wire protocol
-  * [peer](https://github.com/flokiorg/go-flokicoin/tree/master/peer) -
+  * [peer](https://github.com/flokiorg/go-flokicoin/tree/main/peer) -
     Provides a common base for creating and managing Bitcoin network peers.
-  * [blockchain](https://github.com/flokiorg/go-flokicoin/tree/master/blockchain) -
+  * [blockchain](https://github.com/flokiorg/go-flokicoin/tree/main/blockchain) -
     Implements Bitcoin block handling and chain selection rules
-  * [blockchain/fullblocktests](https://github.com/flokiorg/go-flokicoin/tree/master/blockchain/fullblocktests) -
+  * [blockchain/fullblocktests](https://github.com/flokiorg/go-flokicoin/tree/main/blockchain/fullblocktests) -
     Provides a set of block tests for testing the consensus validation rules
-  * [txscript](https://github.com/flokiorg/go-flokicoin/tree/master/txscript) -
+  * [txscript](https://github.com/flokiorg/go-flokicoin/tree/main/txscript) -
     Implements the Bitcoin transaction scripting language
-  * [crypto](https://github.com/flokiorg/go-flokicoin/tree/master/crypto) - Implements
+  * [crypto](https://github.com/flokiorg/go-flokicoin/tree/main/crypto) - Implements
     support for the elliptic curve cryptographic functions needed for the
     Bitcoin scripts
-  * [database](https://github.com/flokiorg/go-flokicoin/tree/master/database) -
+  * [database](https://github.com/flokiorg/go-flokicoin/tree/main/database) -
     Provides a database interface for the Bitcoin block chain
-  * [mempool](https://github.com/flokiorg/go-flokicoin/tree/master/mempool) -
+  * [mempool](https://github.com/flokiorg/go-flokicoin/tree/main/mempool) -
     Package mempool provides a policy-enforced pool of unmined bitcoin
     transactions.
-  * [chainutil](https://github.com/flokiorg/go-flokicoin/tree/master/chainutil) - Provides Bitcoin-specific
+  * [chainutil](https://github.com/flokiorg/go-flokicoin/tree/main/chainutil) - Provides Bitcoin-specific
     convenience functions and types
-  * [chainhash](https://github.com/flokiorg/go-flokicoin/tree/master/chaincfg/chainhash) -
+  * [chainhash](https://github.com/flokiorg/go-flokicoin/tree/main/chaincfg/chainhash) -
     Provides a generic hash type and associated functions that allows the
     specific hash algorithm to be abstracted.
-  * [connmgr](https://github.com/flokiorg/go-flokicoin/tree/master/connmgr) -
+  * [connmgr](https://github.com/flokiorg/go-flokicoin/tree/main/connmgr) -
     Package connmgr implements a generic Bitcoin network connection manager.
