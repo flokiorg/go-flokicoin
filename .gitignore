@@ -1,0 +1,57 @@
+# Temp files
+*~
+
+# Databases
+flokicoind.db
+*-shm
+*-wal
+
+# Log files
+*.log
+
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+vendor
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+
+# Code coverage files
+profile.tmp
+profile.cov
+coverage.txt
+crypto/coverage.txt
+chainutil/coverage.txt
+chainutil/psbt/coverage.txt
+
+# vim
+*.swp
+*.swo
+/.vim
+
+# Binaries produced by "make build"
+/addblock
+/flokicoin-cli
+/flokicoind
+/findcheckpoint
+/gencerts
+
+
+.vscode
