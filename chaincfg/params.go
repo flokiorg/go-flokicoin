@@ -187,6 +187,10 @@ type Params struct {
 	// regtest like networks.
 	PoWNoRetargeting bool
 
+	// EnforceBIP94 enforces timewarp attack mitigation and on testnet4
+	// this also enforces the block storm mitigation.
+	EnforceBIP94 bool
+
 	// These fields define the block heights at which the specified softfork
 	// BIP became active.
 	BIP0034Height int32
@@ -417,6 +421,7 @@ var RegressionNetParams = Params{
 	ReduceMinDifficulty:      true,
 	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
 	GenerateSupported:        true,
+	EnforceBIP94:             true,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
@@ -518,9 +523,9 @@ var TestNet3Params = Params{
 	GenesisHash:              &testNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
 	PowLimitBits:             0x207fffff,
-	BIP0034Height:            0,
-	BIP0065Height:            0,
-	BIP0066Height:            0,
+	BIP0034Height:            1,
+	BIP0065Height:            1,
+	BIP0066Height:            1,
 	CoinbaseMaturity:         100, // must be same as maturity unit tests
 	SubsidyReductionInterval: 210_000,
 	TargetTimespan:           time.Minute * 1, // 1 minute
@@ -637,9 +642,9 @@ var SimNetParams = Params{
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
 	PowLimitBits:             0x207fffff,
-	BIP0034Height:            0, // Always active on simnet
-	BIP0065Height:            0, // Always active on simnet
-	BIP0066Height:            0, // Always active on simnet
+	BIP0034Height:            1, // Always active on simnet
+	BIP0065Height:            1, // Always active on simnet
+	BIP0066Height:            1, // Always active on simnet
 	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 210_000,
 	TargetTimespan:           time.Minute * 1, // 1 minute

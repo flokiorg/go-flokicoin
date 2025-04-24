@@ -271,6 +271,10 @@ const (
 	// ErrAuxpowNotAllowed indicates that an auxpow block was found on a chain where
 	// auxpow is not allowed or at a height where auxpow is not allowed.
 	ErrAuxpowNotAllowed
+
+	// ErrTimewarpAttack indicates a timewarp attack i.e.
+	// when block's timestamp is too early on diff adjustment block.
+	ErrTimewarpAttack
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.
