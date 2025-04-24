@@ -311,7 +311,23 @@ var MainNetParams = Params{
 	GenerateSupported:        false,
 
 	// Checkpoints ordered from oldest to newest.
-	Checkpoints: []Checkpoint{},
+	Checkpoints: []Checkpoint{
+		{147, newHashFromStr("0d8391a88017a88d95f49dbf42adebc430fa04d1d3c9bf52a92a130b346ebb57")},
+		{2983, newHashFromStr("1eeb51ace20c6d4ab150bb56d86d3f61417fd1fa7df6640841fdf2124f6ceead")},
+		{4712, newHashFromStr("1284f04482bd5efeb42bc00142daa65ed7cbe3babd59424f86b4aa82de264168")},
+		{5806, newHashFromStr("6513e70b5bd3bc2c45855b78df3af5e1e9743c6d4359957214e1e19adcb54e2e")},
+		{6305, newHashFromStr("2d752dc92f7590fd7a8b2b912d401de2828eaec655b62f37f3ebaf4c9ca22550")},
+		{7999, newHashFromStr("e99a243bebc88d3b6e11ccf34a440c6fd46edd9049be12b378f78032b606f687")},
+		{8644, newHashFromStr("7b075fcb3e3af591770b7bb93f89e51b3c8b4e8bd10057ed6924ba90b116116e")},
+		{9230, newHashFromStr("16d651d5a928787e7edb2d12596c17afbfec59c24b37cd4e9e8c16c3f96a5342")},
+		{10421, newHashFromStr("a647fb2ec6e05ee1573f2178129528ade20e64a1bfc37e72ceb55ee8d1b663eb")},
+		{12087, newHashFromStr("918fdb720b770995199efb9dd368b8590cbe8a5dd97ef741b63044966501bc83")},
+		{13778, newHashFromStr("652d4660df181726263cc4b1f3c7ee9e9443f2c95bc41dbd6253b15744506d8c")},
+		{15116, newHashFromStr("6be77239c3968fb548af4b4058e3623df5a63c1fe26210f86a1c527a0f4aad87")},
+		{17254, newHashFromStr("880341509f7d01e697239599e5e07fc0a0568a01a6ddcb3ec8d06f6452815221")},
+		{20390, newHashFromStr("90e1fef1e32187e6c5256412e2c496b1020d9a10d972cd38c4b8f89d61c6263c")},
+		{23865, newHashFromStr("b636660d20743bb1debd0b3254c5117a11b1ed9c8a66aa267b23e76419e606c8")},
+	},
 
 	// Consensus rule change deployments.
 	//
