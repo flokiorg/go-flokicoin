@@ -48,7 +48,7 @@ chainutil/psbt/coverage.txt
 
 # Binaries produced by "make build"
 /addblock
-/flokicoin-cli
+/flokicoind-cli
 /flokicoind
 /findcheckpoint
 /gencerts

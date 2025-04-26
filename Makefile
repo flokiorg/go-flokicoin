@@ -70,7 +70,7 @@ goimports:
 build:
 	@$(call print, "Building all binaries")
 	$(GOBUILD) $(PKG)
-	$(GOBUILD) $(PKG)/cmd/flokicoin-cli
+	$(GOBUILD) $(PKG)/cmd/flokicoind-cli
 	$(GOBUILD) $(PKG)/cmd/gencerts
 	$(GOBUILD) $(PKG)/cmd/findcheckpoint
 	$(GOBUILD) $(PKG)/cmd/addblock
@@ -79,16 +79,16 @@ build:
 install:
 	@$(call print, "Installing all binaries")
 	$(GOINSTALL) $(PKG)
-	$(GOINSTALL) $(PKG)/cmd/flokicoin-cli
+	$(GOINSTALL) $(PKG)/cmd/flokicoind-cli
 	$(GOINSTALL) $(PKG)/cmd/gencerts
 	$(GOINSTALL) $(PKG)/cmd/findcheckpoint
 	$(GOINSTALL) $(PKG)/cmd/addblock
 
-#? release-install: Install flokicoind and flokicoin-cli release binaries, place them in $GOPATH/bin
+#? release-install: Install flokicoind and flokicoind-cli release binaries, place them in $GOPATH/bin
 release-install:
-	@$(call print, "Installing flokicoind and flokicoin-cli release binaries")
+	@$(call print, "Installing flokicoind and flokicoind-cli release binaries")
 	env CGO_ENABLED=0 $(GOINSTALL) -trimpath -ldflags="-s -w -buildid=" $(PKG)
-	env CGO_ENABLED=0 $(GOINSTALL) -trimpath -ldflags="-s -w -buildid=" $(PKG)/cmd/flokicoin-cli
+	env CGO_ENABLED=0 $(GOINSTALL) -trimpath -ldflags="-s -w -buildid=" $(PKG)/cmd/flokicoind-cli
 
 # =======
 # TESTING

@@ -2167,14 +2167,13 @@ func New(config *Config) (*BlockChain, error) {
 	// Generate a checkpoint by height map from the provided checkpoints
 	// and assert the provided checkpoints are sorted by height as required.
 	var checkpointsByHeight map[int32]*chaincfg.Checkpoint
-	var prevCheckpointHeight int32
+	var prevCheckpointHeight int32 = -1
 	if len(config.Checkpoints) > 0 {
 		checkpointsByHeight = make(map[int32]*chaincfg.Checkpoint)
 		for i := range config.Checkpoints {
 			checkpoint := &config.Checkpoints[i]
 			if checkpoint.Height <= prevCheckpointHeight {
-				return nil, AssertError("blockchain.New " +
-					"checkpoints are not sorted by height")
+				return nil, AssertError("blockchain.New checkpoints are not sorted by height")
 			}
 
 			checkpointsByHeight[checkpoint.Height] = checkpoint

@@ -196,7 +196,7 @@ func (c *Client) GetBlockVerboseAsync(blockHash *chainhash.Hash) FutureGetBlockV
 	if blockHash != nil {
 		hash = blockHash.String()
 	}
-	// From the flokicoin-cli getblock documentation:
+	// From the flokicoind-cli getblock documentation:
 	// "If verbosity is 1, returns an Object with information about block ."
 	cmd := chainjson.NewGetBlockCmd(hash, chainjson.Int(1))
 	return FutureGetBlockVerboseResult{
@@ -251,7 +251,7 @@ func (c *Client) GetBlockVerboseTxAsync(blockHash *chainhash.Hash) FutureGetBloc
 		hash = blockHash.String()
 	}
 
-	// From the flokicoin-cli getblock documentation:
+	// From the flokicoind-cli getblock documentation:
 	//
 	// If verbosity is 2, returns an Object with information about block
 	// and information about each transaction.

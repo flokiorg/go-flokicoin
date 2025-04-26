@@ -8,6 +8,7 @@ package mempool
 import (
 	"container/list"
 	"fmt"
+	"maps"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -697,9 +698,7 @@ func (mp *TxPool) txAncestors(tx *chainutil.Tx,
 			cache[*parent.Tx.Hash()] = moreAncestors
 		}
 
-		for hash, ancestor := range moreAncestors {
-			ancestors[hash] = ancestor
-		}
+		maps.Copy(ancestors, moreAncestors)
 	}
 
 	return ancestors
@@ -767,9 +766,9 @@ func (mp *TxPool) txConflicts(tx *chainutil.Tx) map[chainhash.Hash]*chainutil.Tx
 			continue
 		}
 		conflicts[*conflict.Hash()] = conflict
-		for hash, descendant := range mp.txDescendants(conflict, nil) {
-			conflicts[hash] = descendant
-		}
+
+		descendants := mp.txDescendants(conflict, nil)
+		maps.Copy(conflicts, descendants)
 	}
 	return conflicts
 }

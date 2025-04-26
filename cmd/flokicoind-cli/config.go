@@ -29,9 +29,9 @@ const (
 
 var (
 	flokicoindHomeDir     = chainutil.AppDataDir("flokicoind", false)
-	flokicoincliHomeDir   = chainutil.AppDataDir("flokicoin-cli", false)
+	flokicoincliHomeDir   = chainutil.AppDataDir("flokicoind-cli", false)
 	walletdHomeDir        = chainutil.AppDataDir("flcwallet", false)
-	defaultConfigFile     = filepath.Join(flokicoincliHomeDir, "flokicoin-cli.conf")
+	defaultConfigFile     = filepath.Join(flokicoincliHomeDir, "flokicoind-cli.conf")
 	defaultRPCServer      = "localhost"
 	defaultRPCCertFile    = filepath.Join(flokicoindHomeDir, "rpc.cert")
 	defaultWalletCertFile = filepath.Join(walletdHomeDir, "rpc.cert")
@@ -90,7 +90,7 @@ func listCommands() {
 	}
 }
 
-// config defines the configuration options for flokicoin-cli.
+// config defines the configuration options for flokicoind-cli.
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
@@ -229,7 +229,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
-		// Use config file for RPC server to create default flokicoin-cli config
+		// Use config file for RPC server to create default flokicoind-cli config
 		var serverConfigPath string
 		if preCfg.Wallet {
 			serverConfigPath = filepath.Join(walletdHomeDir, "walletd.conf")

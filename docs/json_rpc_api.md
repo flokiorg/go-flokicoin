@@ -134,7 +134,7 @@ authenticated will cause the websocket to be closed immediately.
 
 ### 4. Command-line Utility
 
-flokicoind comes with a separate utility named `flokicoin-cli` which can be used to issue
+flokicoind comes with a separate utility named `flokicoind-cli` which can be used to issue
 these RPC commands via HTTP POST requests to flokicoind after configuring it with the
 information in the [Authentication](#Authentication) section above.  It can also
 be used to communicate with any server/daemon/service which provides a JSON-RPC

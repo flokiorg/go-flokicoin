@@ -156,7 +156,7 @@ const (
 
 	// getAddrPercent is the percentage of total addresses known that we
 	// will share with a call to AddressCache.
-	getAddrPercent = 100 // 23 #FLZ_CHANGE
+	getAddrPercent = 100 // 23 #FLZ_CHANGE temp % unti chain maturity
 
 	// serialisationVersion is the current version of the on-disk format.
 	serialisationVersion = 2

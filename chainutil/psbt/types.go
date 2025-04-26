@@ -28,7 +28,7 @@ const (
 	// integer indexes concatenated with each other. The number of 32 bit
 	// unsigned integer indexes must match the depth provided in the
 	// extended public key.
-	XpubType GlobalType = 1
+	XPubType GlobalType = 1
 
 	// VersionType houses the global version number of this PSBT. There is
 	// no key (only contains the byte type), then the value if omitted, is

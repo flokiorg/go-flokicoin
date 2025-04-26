@@ -298,9 +298,9 @@ var MainNetParams = Params{
 	GenesisHash:              &mainGenesisHash,
 	PowLimit:                 mainPowLimit,
 	PowLimitBits:             0x1f00ffff,
-	BIP0034Height:            0,
-	BIP0065Height:            0,
-	BIP0066Height:            0,
+	BIP0034Height:            1,
+	BIP0065Height:            1,
+	BIP0066Height:            1,
 	CoinbaseMaturity:         300,             // 300 => 5h
 	SubsidyReductionInterval: 210_000,         // interval of blocks before halving = 5 months
 	TargetTimespan:           time.Minute * 1, // 1 minute
@@ -312,6 +312,7 @@ var MainNetParams = Params{
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{
+		{0, newHashFromStr("c3474fa0b6c00824b01ce630d03f4ba49e11ced6373164b38ed2741dcd90ba84")},
 		{147, newHashFromStr("0d8391a88017a88d95f49dbf42adebc430fa04d1d3c9bf52a92a130b346ebb57")},
 		{2983, newHashFromStr("1eeb51ace20c6d4ab150bb56d86d3f61417fd1fa7df6640841fdf2124f6ceead")},
 		{4712, newHashFromStr("1284f04482bd5efeb42bc00142daa65ed7cbe3babd59424f86b4aa82de264168")},
