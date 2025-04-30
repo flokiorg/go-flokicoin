@@ -426,7 +426,6 @@ var RegressionNetParams = Params{
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
 	PowLimitBits:             0x207fffff,
-	PoWNoRetargeting:         true,
 	CoinbaseMaturity:         100,       // must be same as in blockchain full tests
 	BIP0034Height:            100000000, // Not active - Permit ver 1 blocks
 	BIP0065Height:            1351,      // Used by regression tests
@@ -435,10 +434,13 @@ var RegressionNetParams = Params{
 	TargetTimespan:           time.Minute * 1, // 1 minute
 	TargetTimePerBlock:       time.Minute * 1, // 1 minute
 	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
-	EnforceBIP94:             true,
+
+	GenerateSupported: true,
+	EnforceBIP94:      true,
+
+	PoWNoRetargeting:     false,           // disable temp retargeting : true
+	ReduceMinDifficulty:  false,           // temp: true
+	MinDiffReductionTime: time.Minute * 2, // TargetTimePerBlock * 2
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
