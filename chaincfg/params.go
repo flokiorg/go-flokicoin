@@ -31,7 +31,7 @@ var (
 
 	// regressionPowLimit is the highest proof of work value a Flokicoin block
 	// can have for the regression test network.  It is the value 2^255 - 1.
-	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne) // 255 => temp
 
 	// testNet3PowLimit is the highest proof of work value a Flokicoin block
 	// can have for the test network (version 3).  It is the value 2^255 - 1.
@@ -425,11 +425,11 @@ var RegressionNetParams = Params{
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
-	PowLimitBits:             0x207fffff,
-	CoinbaseMaturity:         100,       // must be same as in blockchain full tests
-	BIP0034Height:            100000000, // Not active - Permit ver 1 blocks
-	BIP0065Height:            1351,      // Used by regression tests
-	BIP0066Height:            1251,      // Used by regression tests
+	PowLimitBits:             0x1f00ffff, // 0x207fffff, // temp
+	CoinbaseMaturity:         100,        // must be same as in blockchain full tests
+	BIP0034Height:            100000000,  // Not active - Permit ver 1 blocks
+	BIP0065Height:            1351,       // Used by regression tests
+	BIP0066Height:            1251,       // Used by regression tests
 	SubsidyReductionInterval: 150,
 	TargetTimespan:           time.Minute * 1, // 1 minute
 	TargetTimePerBlock:       time.Minute * 1, // 1 minute
