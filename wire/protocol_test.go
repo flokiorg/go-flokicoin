@@ -51,6 +51,7 @@ func TestFlokicoinNetStringer(t *testing.T) {
 		{TestNet, "TestNet"},
 		{TestNet3, "TestNet3"},
 		{SimNet, "SimNet"},
+		{TestNet4, "TestNet4"},
 		{0xffffffff, "Unknown FlokicoinNet (4294967295)"},
 	}
 

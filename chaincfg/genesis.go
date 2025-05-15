@@ -132,6 +132,29 @@ var testNet3GenesisBlock = wire.MsgBlock{
 	Transactions: []*wire.MsgTx{generateGenesisCoinbaseTx()},
 }
 
+// testNet4GenesisHash is the hash of the first block in the block chain for the
+// test network (version 3).
+var testNet4GenesisHash = regTestGenesisHash
+
+// testNet3GenesisMerkleRoot is the hash of the first transaction in the genesis
+// block for the test network (version 3).  It is the same as the merkle root
+// for the main network.
+var testNet4GenesisMerkleRoot = regTestGenesisMerkleRoot
+
+// testNet3GenesisBlock defines the genesis block of the block chain which
+// serves as the public transaction ledger for the test network (version 3).
+var testNet4GenesisBlock = wire.MsgBlock{
+	Header: wire.BlockHeader{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: testNet3GenesisMerkleRoot, // merkleroot
+		Timestamp:  time.Unix(1735376054, 0),  // 28 Dec 2024 08:54:14 +0000 UTC
+		Bits:       0x207fffff,                // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
+		Nonce:      2083236894,
+	},
+	Transactions: []*wire.MsgTx{generateGenesisCoinbaseTx()},
+}
+
 // simNetGenesisHash is the hash of the first block in the block chain for the
 // simulation test network.
 var simNetGenesisHash = regTestGenesisHash
