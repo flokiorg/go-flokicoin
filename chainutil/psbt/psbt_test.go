@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcutil"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
+	"github.com/flokiorg/go-flokicoin/chainutil"
 	"github.com/flokiorg/go-flokicoin/txscript"
 	"github.com/flokiorg/go-flokicoin/wire"
 	"github.com/stretchr/testify/require"
@@ -1505,7 +1505,7 @@ func TestWitnessForNonWitnessUtxo(t *testing.T) {
 			}},
 			TxOut: []*wire.TxOut{{
 				PkScript: outPkScript,
-				Value:    1.9 * btcutil.SatoshiPerBitcoin,
+				Value:    1.9 * chainutil.LokiPerFlokicoin,
 			}},
 		},
 		Inputs:  []PInput{{}},
