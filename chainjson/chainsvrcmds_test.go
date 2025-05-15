@@ -869,7 +869,7 @@ func TestChainSvrCmds(t *testing.T) {
 				return chainjson.NewCmd("getrawtransaction", "123")
 			},
 			staticCmd: func() interface{} {
-				return chainjson.NewGetRawTransactionCmd("123", nil, nil)
+				return chainjson.NewGetRawTransactionCmd("123", nil)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getrawtransaction","params":["123"],"id":1}`,
 			unmarshalled: &chainjson.GetRawTransactionCmd{
@@ -883,7 +883,7 @@ func TestChainSvrCmds(t *testing.T) {
 				return chainjson.NewCmd("getrawtransaction", "123", 1)
 			},
 			staticCmd: func() interface{} {
-				return chainjson.NewGetRawTransactionCmd("123", chainjson.Int(1), nil)
+				return chainjson.NewGetRawTransactionCmd("123", chainjson.Int(1))
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getrawtransaction","params":["123",1],"id":1}`,
 			unmarshalled: &chainjson.GetRawTransactionCmd{
