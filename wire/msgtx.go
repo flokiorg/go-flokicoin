@@ -593,6 +593,7 @@ func (msg *MsgTx) flcDecode(r io.Reader, pver uint32, enc MessageEncoding,
 	// more of its inputs has accompanying witness data.
 	if flag[0] != 0 && enc == WitnessEncoding {
 		for _, txin := range msg.TxIn {
+
 			// For each input, the witness is encoded as a stack
 			// with one or more items. Therefore, we first read a
 			// varint which encodes the number of stack items.
@@ -624,6 +625,7 @@ func (msg *MsgTx) flcDecode(r io.Reader, pver uint32, enc MessageEncoding,
 				totalScriptSize += uint64(len(txin.Witness[j]))
 				sbuf = sbuf[len(txin.Witness[j]):]
 			}
+
 		}
 
 		// Check that if the witness flag is set that we actually have

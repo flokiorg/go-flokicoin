@@ -808,6 +808,7 @@ var helpDescsEnUS = map[string]string{
 	"getmempoolentryresult-wtxid":           "The witness transaction ID.",
 	"getmempoolentryresult-fees":            "A breakdown of transaction fees.",
 	"getmempoolentryresult-depends":         "An array of transaction IDs that must be included in the mempool before this transaction is valid.",
+	"getmempoolentryresult-spentby":         "An array of transaction IDs that spend outputs from this transaction, if any, currently in the mempool.",
 
 	// GetBlockStatsResult result help.
 	"getblockstatsresult-totalfee":            "The total transaction fees paid in this block, in lokis.",
