@@ -10,6 +10,20 @@ import (
 	"github.com/flokiorg/go-flokicoin/wire"
 )
 
+const (
+	Reset    = "\033[0m"
+	Orange   = "\033[38;2;177;128;10m"
+	Bright   = "\033[1m"
+	bonerArt = `
+ _           _    _      _           _       
+| |         | |  (_)    | |         (_)      
+| |     ___ | | ___  ___| |__   __ _ _ _ __  
+| |    / _ \| |/ / |/ __| '_ \ / _` + "`" + ` | | '_ \ 
+| |___| (_) |   <| | (__| | | | (_| | | | | |
+|______\___/|_|\_\_|\___|_| |_|\__,_|_|_| |_|
+`
+)
+
 // activeNetParams is a pointer to the parameters specific to the
 // currently active flokicoin network.
 var activeNetParams = &mainNetParams

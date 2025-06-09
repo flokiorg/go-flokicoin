@@ -44,6 +44,9 @@ var winServiceMain func() (bool, error)
 // notified with the server once it is setup so it can gracefully stop it when
 // requested from the service control manager.
 func fmain(serverChan chan<- *server) error {
+
+	fmt.Println(Orange + Bright + bonerArt + Reset)
+
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	tcfg, _, err := loadConfig()
