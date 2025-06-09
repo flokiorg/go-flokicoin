@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcutil"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
+	"github.com/flokiorg/go-flokicoin/chainutil"
 	"github.com/flokiorg/go-flokicoin/txscript"
 	"github.com/flokiorg/go-flokicoin/wire"
 	"github.com/stretchr/testify/require"
@@ -1305,7 +1305,8 @@ func TestMaybeFinalizeAll(t *testing.T) {
 }
 
 func TestFromUnsigned(t *testing.T) {
-	serTx, err := hex.DecodeString("00000000000101e165f072311e71825b47a4797221d7ae56d4b40b7707c540049aee43302448a40000000000feffffff0212f1126a0000000017a9143e836801b2b15aa193449d815c62d6c4b6227c898780778e060000000017a914ba4bdb0b07d67bc60f59c1f4fe54170565254974870000000000")
+
+	serTx, err := hex.DecodeString("020000000158e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd7501000000000000000001802b530b00000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00000000") // #FLZ_CHANGE
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -1324,7 +1325,7 @@ func TestFromUnsigned(t *testing.T) {
 	}
 
 	// Compare with output of Core:
-	fromCoreB64 := "cHNidP8BAHMAAAAAAeFl8HIxHnGCW0ekeXIh165W1LQLdwfFQASa7kMwJEikAAAAAAD+////AhLxEmoAAAAAF6kUPoNoAbKxWqGTRJ2BXGLWxLYifImHgHeOBgAAAAAXqRS6S9sLB9Z7xg9ZwfT+VBcFZSVJdIcAAAAAAAAAAA=="
+	fromCoreB64 := "cHNidP8BAFICAAAAAVjoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AQAAAAAAAAAAAYArUwsAAAAAFgAU2FwrcdAGCwnJiGrrgV5QmR3aEk0AAAAAAAAA"
 	if encoded != fromCoreB64 {
 		t.Fatalf("Got incorrect b64: %v", encoded)
 	}
@@ -1505,7 +1506,7 @@ func TestWitnessForNonWitnessUtxo(t *testing.T) {
 			}},
 			TxOut: []*wire.TxOut{{
 				PkScript: outPkScript,
-				Value:    1.9 * btcutil.SatoshiPerBitcoin,
+				Value:    1.9 * chainutil.LokiPerFlokicoin,
 			}},
 		},
 		Inputs:  []PInput{{}},
