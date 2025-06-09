@@ -132,7 +132,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	// manually craft the block version that's used to signal the soft-fork
 	// activation.
 	csvBit := netParams.Deployments[chaincfg.DeploymentCSV].BitNumber
-	blockVersion := int32(0x20000000 | (uint32(1) << csvBit)) // 0x00210000
+	blockVersion := int32(0x20000000 | (uint32(1) << csvBit))
 
 	// Generate enough synthetic blocks to activate CSV.
 	chain := newFakeChain(netParams)
