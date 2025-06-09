@@ -16,15 +16,15 @@ const (
 
 	// vbTopBits defines the bits to set in the version to signal that the
 	// version bits scheme is being used.
-	vbTopBits = 0x20000000 // 0x00210000 baseVersion that include chainID x21. prev: 0x20000000
+	vbTopBits = 0x20000000
 
 	// vbNumBits is the total number of bits available for use with the
 	// version bits scheme.
-	vbNumBits = 16 // 16  . prev: 29
+	vbNumBits = 29 // 16
 
 	// vbTopMask is the bitmask to use to determine whether or not the
 	// version bits scheme is in use.
-	vbTopMask = (1 << vbNumBits) - 1 // 0x0000FFFF. prev: 0xe0000000
+	vbTopMask = 0xe0000000 // (1 << vbNumBits) - 1 // 0x0000FFFF. prev: 0xe0000000
 
 )
 
@@ -301,6 +301,7 @@ func (b *BlockChain) CalcNextBlockVersion() (int32, error) {
 func (b *BlockChain) warnUnknownRuleActivations(node *blockNode) error {
 	// Warn if any unknown new rules are either about to activate or have
 	// already been activated.
+	return nil // #FLZ_CHANGE temporarily disabled
 	for bit := uint32(0); bit < vbNumBits; bit++ {
 		checker := bitConditionChecker{bit: bit, chain: b}
 		cache := &b.warningCaches[bit]
