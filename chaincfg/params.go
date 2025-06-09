@@ -31,7 +31,7 @@ var (
 
 	// regressionPowLimit is the highest proof of work value a Flokicoin block
 	// can have for the regression test network.  It is the value 2^255 - 1.
-	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne) // 255 => temp
+	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 	// testNet3PowLimit is the highest proof of work value a Flokicoin block
 	// can have for the test network (version 3).  It is the value 2^255 - 1.
@@ -303,7 +303,7 @@ var MainNetParams = Params{
 	BIP0066Height:            1,
 	CoinbaseMaturity:         300,             // 300 => 5h
 	SubsidyReductionInterval: 210_000,         // interval of blocks before halving = 5 months
-	TargetTimespan:           time.Minute * 1, // 5 hours
+	TargetTimespan:           time.Minute * 1, // 1 minute
 	TargetTimePerBlock:       time.Minute * 1, // 1 minute
 	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
 	ReduceMinDifficulty:      false,
@@ -427,11 +427,11 @@ var RegressionNetParams = Params{
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
-	PowLimitBits:             0x1f00ffff, // 0x207fffff, // temp
-	CoinbaseMaturity:         100,        // must be same as in blockchain full tests
-	BIP0034Height:            100000000,  // Not active - Permit ver 1 blocks
-	BIP0065Height:            1351,       // Used by regression tests
-	BIP0066Height:            1251,       // Used by regression tests
+	PowLimitBits:             0x207fffff,
+	CoinbaseMaturity:         100,       // must be same as in blockchain full tests
+	BIP0034Height:            100000000, // Not active - Permit ver 1 blocks
+	BIP0065Height:            1351,      // Used by regression tests
+	BIP0066Height:            1251,      // Used by regression tests
 	SubsidyReductionInterval: 150,
 	TargetTimespan:           time.Minute * 1, // 1 minute
 	TargetTimePerBlock:       time.Minute * 1, // 1 minute
@@ -562,22 +562,20 @@ var TestNet3Params = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 95,  // 95% of MinerConfirmationWindow
-	MinerConfirmationWindow:       100, // x days
+	RuleChangeActivationThreshold: 75,  // 95% of MinerConfirmationWindow
+	MinerConfirmationWindow:       500, // x days
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
-			BitNumber: 15,
+			BitNumber: 28,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Time{}, // Always available for vote
+				time.Unix(1631485359, 0), // 2021-10-03
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Time{}, // Never expires
+				time.Unix(1652064987, 0), // 2022-05-09
 			),
 		},
 		DeploymentTestDummyMinActivation: {
-			BitNumber:                 14,
-			CustomActivationThreshold: 72,  // Only needs 50% hash rate.
-			MinActivationHeight:       600, // Can only activate after height 600.
+			BitNumber: 27,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
 				time.Time{}, // Always available for vote
 			),
@@ -586,31 +584,30 @@ var TestNet3Params = Params{
 			),
 		},
 		DeploymentCSV: {
-			BitNumber:                 0,
-			CustomActivationThreshold: 0,
+			BitNumber: 0,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1748159396, 0),
+				time.Unix(1749107593, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1749159396, 0),
+				time.Unix(1749108000, 0),
 			),
 		},
 		DeploymentSegwit: {
 			BitNumber: 1,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1849158762, 0),
+				time.Unix(1749108000, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1949158762, 0),
+				time.Unix(1749109000, 0),
 			),
 		},
 		DeploymentTaproot: {
 			BitNumber: 2,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1959158762, 0),
+				time.Unix(1749110000, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1999158762, 0),
+				time.Unix(1749111000, 0),
 			),
 		},
 	},
