@@ -29,9 +29,9 @@ const (
 
 var (
 	flokicoindHomeDir     = chainutil.AppDataDir("flokicoind", false)
-	flokicoincliHomeDir   = chainutil.AppDataDir("flokicoind-cli", false)
-	walletdHomeDir        = chainutil.AppDataDir("flcwallet", false)
-	defaultConfigFile     = filepath.Join(flokicoincliHomeDir, "flokicoind-cli.conf")
+	flokicoindcliHomeDir  = chainutil.AppDataDir("flokicoind-cli", false)
+	walletdHomeDir        = chainutil.AppDataDir("twallet", false)
+	defaultConfigFile     = filepath.Join(flokicoindcliHomeDir, "flokicoind-cli.conf")
 	defaultRPCServer      = "localhost"
 	defaultRPCCertFile    = filepath.Join(flokicoindHomeDir, "rpc.cert")
 	defaultWalletCertFile = filepath.Join(walletdHomeDir, "rpc.cert")
@@ -164,7 +164,7 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 func cleanAndExpandPath(path string) string {
 	// Expand initial ~ to OS specific home directory.
 	if strings.HasPrefix(path, "~") {
-		homeDir := filepath.Dir(flokicoincliHomeDir)
+		homeDir := filepath.Dir(flokicoindcliHomeDir)
 		path = strings.Replace(path, "~", homeDir, 1)
 	}
 
