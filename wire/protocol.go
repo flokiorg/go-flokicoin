@@ -182,6 +182,9 @@ const (
 
 	// SimNet represents the simulation test network.
 	SimNet FlokicoinNet = 0x12141c16
+
+	// TestNet4 represents the test network (version 4).
+	TestNet4 FlokicoinNet = 0x283f161c
 )
 
 // bnStrings is a map of flokicoin networks back to their constant names for
@@ -191,6 +194,7 @@ var bnStrings = map[FlokicoinNet]string{
 	TestNet:  "TestNet",
 	TestNet3: "TestNet3",
 	SimNet:   "SimNet",
+	TestNet4: "TestNet4",
 }
 
 // String returns the FlokicoinNet in human-readable form.
