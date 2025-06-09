@@ -31,11 +31,11 @@ var (
 
 	// regressionPowLimit is the highest proof of work value a Flokicoin block
 	// can have for the regression test network.  It is the value 2^255 - 1.
-	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+	regressionPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne) // 255 => temp
 
 	// testNet3PowLimit is the highest proof of work value a Flokicoin block
 	// can have for the test network (version 3).  It is the value 2^255 - 1.
-	testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne) // 224
+	testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 	// simNetPowLimit is the highest proof of work value a Flokicoin block
 	// can have for the simulation test network.  It is the value 2^255 - 1.
@@ -303,7 +303,7 @@ var MainNetParams = Params{
 	BIP0066Height:            1,
 	CoinbaseMaturity:         300,             // 300 => 5h
 	SubsidyReductionInterval: 210_000,         // interval of blocks before halving = 5 months
-	TargetTimespan:           time.Minute * 1, // 1 minute
+	TargetTimespan:           time.Minute * 1, // 5 hours
 	TargetTimePerBlock:       time.Minute * 1, // 1 minute
 	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
 	ReduceMinDifficulty:      false,
@@ -340,38 +340,40 @@ var MainNetParams = Params{
 		DeploymentTestDummy: {
 			BitNumber: 28,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1577833200, 0), // January 1, 2020
+				time.Unix(1077833200, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1609455600, 0), // January 1, 2021
+				time.Unix(1109455600, 0),
 			),
 		},
 		DeploymentTestDummyMinActivation: {
-			BitNumber: 22,
+			BitNumber: 27,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1577833200, 0), // January 1, 2020
+				time.Unix(1277833200, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1609455600, 0), // January 1, 2021
+				time.Unix(1309455600, 0),
 			),
 		},
 		DeploymentCSV: {
-			BitNumber: 0,
+			BitNumber: 22,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1632088800, 0), // September 20, 2021
+				time.Unix(1631485359, 0), // 2021-10-03
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1631485800, 0), // September 13, 2021
+				time.Unix(1652064987, 0), // 2022-05-09
 			),
+			CustomActivationThreshold: 10,
 		},
 		DeploymentSegwit: {
-			BitNumber: 1,
+			BitNumber: 22,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1631656800, 0), // September 15, 2021
+				time.Unix(1633218652, 0), // 2021-10-03
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1632088800, 0), // September 20, 2021
+				time.Unix(1652314497, 0), // 2022-05-12
 			),
+			CustomActivationThreshold: 10,
 		},
 		DeploymentTaproot: {
 			BitNumber: 2,
@@ -425,22 +427,20 @@ var RegressionNetParams = Params{
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
-	PowLimitBits:             0x207fffff,
-	CoinbaseMaturity:         100,       // must be same as in blockchain full tests
-	BIP0034Height:            100000000, // Not active - Permit ver 1 blocks
-	BIP0065Height:            1351,      // Used by regression tests
-	BIP0066Height:            1251,      // Used by regression tests
+	PowLimitBits:             0x1f00ffff, // 0x207fffff, // temp
+	CoinbaseMaturity:         100,        // must be same as in blockchain full tests
+	BIP0034Height:            100000000,  // Not active - Permit ver 1 blocks
+	BIP0065Height:            1351,       // Used by regression tests
+	BIP0066Height:            1251,       // Used by regression tests
 	SubsidyReductionInterval: 150,
 	TargetTimespan:           time.Minute * 1, // 1 minute
 	TargetTimePerBlock:       time.Minute * 1, // 1 minute
 	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
-
-	GenerateSupported: true,
-	EnforceBIP94:      true,
-
-	PoWNoRetargeting:     false,           // disable temp retargeting : true
-	ReduceMinDifficulty:  false,           // temp: true
-	MinDiffReductionTime: time.Minute * 2, // TargetTimePerBlock * 2
+	EnforceBIP94:             true,
+	PoWNoRetargeting:         true,
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
+	GenerateSupported:        true,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
@@ -562,22 +562,22 @@ var TestNet3Params = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 6840, // 95% of MinerConfirmationWindow
-	MinerConfirmationWindow:       7200, // 5 days
+	RuleChangeActivationThreshold: 95,  // 95% of MinerConfirmationWindow
+	MinerConfirmationWindow:       100, // x days
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
-			BitNumber: 28,
+			BitNumber: 15,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(163100000, 0), // January 1, 2008 UTC
+				time.Time{}, // Always available for vote
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(163100000, 0), // December 31, 2008 UTC
+				time.Time{}, // Never expires
 			),
 		},
 		DeploymentTestDummyMinActivation: {
-			BitNumber:                 22,
-			CustomActivationThreshold: 1815,    // Only needs 90% hash rate.
-			MinActivationHeight:       10_0000, // Can only activate after height 10k.
+			BitNumber:                 14,
+			CustomActivationThreshold: 72,  // Only needs 50% hash rate.
+			MinActivationHeight:       600, // Can only activate after height 600.
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
 				time.Time{}, // Always available for vote
 			),
@@ -586,32 +586,32 @@ var TestNet3Params = Params{
 			),
 		},
 		DeploymentCSV: {
-			BitNumber: 0,
+			BitNumber:                 0,
+			CustomActivationThreshold: 0,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1456790400, 0), // March 1st, 2016
+				time.Unix(1748159396, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1493596800, 0), // May 1st, 2017
+				time.Unix(1749159396, 0),
 			),
 		},
 		DeploymentSegwit: {
 			BitNumber: 1,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1462060800, 0), // May 1, 2016 UTC
+				time.Unix(1849158762, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1493596800, 0), // May 1, 2017 UTC.
+				time.Unix(1949158762, 0),
 			),
 		},
 		DeploymentTaproot: {
 			BitNumber: 2,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1619222400, 0), // April 24th, 2021 UTC.
+				time.Unix(1959158762, 0),
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1628640000, 0), // August 11th, 2021 UTC
+				time.Unix(1999158762, 0),
 			),
-			CustomActivationThreshold: 1512, // 75%
 		},
 	},
 
@@ -626,6 +626,115 @@ var TestNet3Params = Params{
 	// Human-readable part for Bech32 encoded segwit addresses, as defined in
 	// BIP 173.
 	Bech32HRPSegwit: "tf", // always tf for test net
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x6f, // starts with m or n
+	ScriptHashAddrID:        0xc4, // starts with 2
+	WitnessPubKeyHashAddrID: 0x03, // starts with QW
+	WitnessScriptHashAddrID: 0x28, // starts with T7n
+	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 1,
+}
+
+// TestNet4Params defines the network parameters for the test Bitcoin network
+// (version 4).
+var TestNet4Params = Params{
+	Name:        "testnet4",
+	Net:         wire.TestNet4,
+	DefaultPort: "48333",
+	DNSSeeds:    []DNSSeed{},
+
+	// Chain parameters
+	GenesisBlock:             &testNet4GenesisBlock,
+	GenesisHash:              &testNet4GenesisHash,
+	PowLimit:                 testNet3PowLimit,
+	PowLimitBits:             0x1d00ffff,
+	EnforceBIP94:             true,
+	BIP0034Height:            1,
+	BIP0065Height:            1,
+	BIP0066Height:            1,
+	CoinbaseMaturity:         100,
+	SubsidyReductionInterval: 210000,
+	TargetTimespan:           time.Hour * 24 * 14, // 14 days
+	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Consensus rule change deployments.
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
+	RuleChangeActivationThreshold: 1512, // 75% of MinerConfirmationWindow
+	MinerConfirmationWindow:       2016,
+	Deployments: [DefinedDeployments]ConsensusDeployment{
+		DeploymentTestDummy: {
+			BitNumber: 28,
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Unix(1199145601, 0), // January 1, 2008 UTC
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Unix(1230767999, 0), // December 31, 2008 UTC
+			),
+		},
+		DeploymentTestDummyMinActivation: {
+			BitNumber:                 22,
+			CustomActivationThreshold: 1815,    // Only needs 90% hash rate.
+			MinActivationHeight:       10_0000, // Can only activate after height 10k.
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Time{}, // Always available for vote
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Time{}, // Never expires
+			),
+		},
+		DeploymentCSV: {
+			BitNumber: 31,
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Time{}, // Always available for vote
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Time{}, // Never expires
+			),
+		},
+		DeploymentSegwit: {
+			BitNumber: 29,
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Time{}, // Always available for vote
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Time{}, // Never expires
+			),
+		},
+		DeploymentTaproot: {
+			BitNumber: 2,
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Time{}, // Always available for vote
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Time{}, // Never expires
+			),
+			MinActivationHeight: 0,
+		},
+	},
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "tb", // always tb for test net
 
 	// Address encoding magics
 	PubKeyHashAddrID:        0x6f, // starts with m or n
@@ -684,7 +793,7 @@ var SimNetParams = Params{
 	MinerConfirmationWindow:       100,
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
-			BitNumber: 28,
+			BitNumber: 15,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
 				time.Time{}, // Always available for vote
 			),
@@ -693,7 +802,7 @@ var SimNetParams = Params{
 			),
 		},
 		DeploymentTestDummyMinActivation: {
-			BitNumber:                 22,
+			BitNumber:                 14,
 			CustomActivationThreshold: 50,  // Only needs 50% hash rate.
 			MinActivationHeight:       600, // Can only activate after height 600.
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
@@ -1057,4 +1166,5 @@ func init() {
 	mustRegister(&TestNet3Params)
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
+	mustRegister(&TestNet4Params)
 }
