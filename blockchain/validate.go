@@ -749,12 +749,6 @@ func CheckBlockHeaderContext(header *wire.BlockHeader, prevNode HeaderCtx,
 			return ruleError(ErrUnexpectedDifficulty, str)
 		}
 
-		if header.Timestamp.Before(time.Unix(prevNode.Timestamp(), 0)) { // #FLZ_CHANGE
-			str := "block timestamp of %v is not after expected %v"
-			str = fmt.Sprintf(str, header.Timestamp, prevNode.Timestamp())
-			return ruleError(ErrTimeTooOld, str)
-		}
-
 		// Ensure the timestamp for the block header is after the
 		// median time of the last several blocks (medianTimeBlocks).
 		medianTime := CalcPastMedianTime(prevNode)
