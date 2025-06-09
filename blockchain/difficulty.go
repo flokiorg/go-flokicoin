@@ -134,8 +134,7 @@ func findPrevTestNetDifficulty(startNode HeaderCtx, c ChainCtx) uint32 {
 // the exported version uses the current best chain as the previous HeaderCtx
 // while this function accepts any block node. This function accepts a ChainCtx
 // parameter that gives the necessary difficulty context variables.
-func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time,
-	c ChainCtx) (uint32, error) {
+func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time, c ChainCtx) (uint32, error) {
 
 	// Emulate the same behavior as Flokicoin that for regtest there is
 	// no difficulty retargeting.
@@ -147,33 +146,6 @@ func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time,
 	if lastNode == nil || lastNode.Height() <= 2 {
 		return c.ChainParams().PowLimitBits, nil
 	}
-
-	// // Return the previous block's difficulty requirements if this block
-	// // is not at a difficulty retarget interval.
-	// if (lastNode.Height()+1)%c.BlocksPerRetarget() != 0 {
-	// 	// For networks that support it, allow special reduction of the
-	// 	// required difficulty once too much time has elapsed without
-	// 	// mining a block.
-	// 	if c.ChainParams().ReduceMinDifficulty {
-	// 		// Return minimum difficulty when more than the desired
-	// 		// amount of time has elapsed without mining a block.
-	// 		reductionTime := int64(c.ChainParams().MinDiffReductionTime /
-	// 			time.Second)
-	// 		allowMinTime := lastNode.Timestamp() + reductionTime
-	// 		if newBlockTime.Unix() > allowMinTime {
-	// 			return c.ChainParams().PowLimitBits, nil
-	// 		}
-
-	// 		// The block was mined within the desired timeframe, so
-	// 		// return the difficulty for the last block which did
-	// 		// not have the special minimum difficulty rule applied.
-	// 		return findPrevTestNetDifficulty(lastNode, c), nil
-	// 	}
-
-	// 	// For the main network (or any unrecognized networks), simply
-	// 	// return the previous block's difficulty requirements.
-	// 	return lastNode.Bits(), nil
-	// }
 
 	// // Get the block node at the previous retarget (targetTimespan days
 	// // worth of blocks).
