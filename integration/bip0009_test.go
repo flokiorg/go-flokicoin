@@ -28,7 +28,7 @@ const (
 
 	// vbTopBits defines the bits to set in the version to signal that the
 	// version bits scheme is being used.
-	vbTopBits = 0x20000000 // 0x00210000
+	vbTopBits = 0x20000000
 )
 
 // assertVersionBit gets the passed block hash from the given test harness and
