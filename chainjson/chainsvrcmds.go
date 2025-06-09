@@ -664,9 +664,8 @@ func NewGetRawMempoolCmd(verbose *bool) *GetRawMempoolCmd {
 // NOTE: This field is an int versus a bool to remain compatible with Flokicoin
 // Core even though it really should be a bool.
 type GetRawTransactionCmd struct {
-	Txid      string
-	Verbose   *int    `jsonrpcdefault:"0"`
-	BlockHash *string `jsonrpcdefault:""`
+	Txid    string
+	Verbose *int `jsonrpcdefault:"0"`
 }
 
 // NewGetRawTransactionCmd returns a new instance which can be used to issue a
@@ -674,11 +673,10 @@ type GetRawTransactionCmd struct {
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewGetRawTransactionCmd(txHash string, verbose *int, blockHash *string) *GetRawTransactionCmd {
+func NewGetRawTransactionCmd(txHash string, verbose *int) *GetRawTransactionCmd {
 	return &GetRawTransactionCmd{
-		Txid:      txHash,
-		Verbose:   verbose,
-		BlockHash: blockHash,
+		Txid:    txHash,
+		Verbose: verbose,
 	}
 }
 

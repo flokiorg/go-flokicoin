@@ -104,18 +104,13 @@ func (r FutureGetRawTransactionResult) Receive() (*chainutil.Tx, error) {
 // the returned instance.
 //
 // See GetRawTransaction for the blocking version and more details.
-func (c *Client) GetRawTransactionAsync(txHash *chainhash.Hash, blkHash *chainhash.Hash) FutureGetRawTransactionResult {
+func (c *Client) GetRawTransactionAsync(txHash *chainhash.Hash) FutureGetRawTransactionResult {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	blockhash := ""
-	if blkHash != nil {
-		blockhash = blkHash.String()
-	}
-
-	cmd := chainjson.NewGetRawTransactionCmd(hash, nil, &blockhash)
+	cmd := chainjson.NewGetRawTransactionCmd(hash, chainjson.Int(0))
 	return c.SendCmd(cmd)
 }
 
@@ -123,8 +118,8 @@ func (c *Client) GetRawTransactionAsync(txHash *chainhash.Hash, blkHash *chainha
 //
 // See GetRawTransactionVerbose to obtain additional information about the
 // transaction.
-func (c *Client) GetRawTransaction(txHash *chainhash.Hash, blockHash *chainhash.Hash) (*chainutil.Tx, error) {
-	return c.GetRawTransactionAsync(txHash, blockHash).Receive()
+func (c *Client) GetRawTransaction(txHash *chainhash.Hash) (*chainutil.Tx, error) {
+	return c.GetRawTransactionAsync(txHash).Receive()
 }
 
 // FutureGetRawTransactionVerboseResult is a future promise to deliver the
@@ -155,18 +150,13 @@ func (r FutureGetRawTransactionVerboseResult) Receive() (*chainjson.TxRawResult,
 // function on the returned instance.
 //
 // See GetRawTransactionVerbose for the blocking version and more details.
-func (c *Client) GetRawTransactionVerboseAsync(txHash *chainhash.Hash, blkHash *chainhash.Hash) FutureGetRawTransactionVerboseResult {
+func (c *Client) GetRawTransactionVerboseAsync(txHash *chainhash.Hash) FutureGetRawTransactionVerboseResult {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	blockhash := ""
-	if blkHash != nil {
-		blockhash = blkHash.String()
-	}
-
-	cmd := chainjson.NewGetRawTransactionCmd(hash, chainjson.Int(1), &blockhash)
+	cmd := chainjson.NewGetRawTransactionCmd(hash, chainjson.Int(1))
 	return c.SendCmd(cmd)
 }
 
@@ -174,8 +164,8 @@ func (c *Client) GetRawTransactionVerboseAsync(txHash *chainhash.Hash, blkHash *
 // its hash.
 //
 // See GetRawTransaction to obtain only the transaction already deserialized.
-func (c *Client) GetRawTransactionVerbose(txHash *chainhash.Hash, blkHash *chainhash.Hash) (*chainjson.TxRawResult, error) {
-	return c.GetRawTransactionVerboseAsync(txHash, blkHash).Receive()
+func (c *Client) GetRawTransactionVerbose(txHash *chainhash.Hash) (*chainjson.TxRawResult, error) {
+	return c.GetRawTransactionVerboseAsync(txHash).Receive()
 }
 
 // FutureDecodeRawTransactionResult is a future promise to deliver the result
