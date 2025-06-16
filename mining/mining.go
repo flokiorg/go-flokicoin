@@ -22,7 +22,7 @@ import (
 const (
 	// MinHighPriority is the minimum priority value that allows a
 	// transaction to be considered high priority.
-	MinHighPriority = chainutil.LokiPerFlokicoin * 144.0 / 250
+	MinHighPriority = chainutil.LokiPerFlokicoin * 1440.0 / 250
 
 	// blockHeaderOverhead is the max number of bytes it takes to serialize
 	// a block header and max possible transaction count.
@@ -695,7 +695,7 @@ mempoolLoop:
 		// minimum block size.
 		if sortedByFee &&
 			prioItem.feePerKB < int64(g.policy.TxMinFreeFee) &&
-			blockPlusTxWeight >= g.policy.BlockMinWeight {
+			blockPlusTxWeight >= g.policy.BlockMinWeight { // #FLZ_CHANGE_FEE
 
 			log.Tracef("Skipping tx %s with feePerKB %d "+
 				"< TxMinFreeFee %d and block weight %d >= "+
