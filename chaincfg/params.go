@@ -584,30 +584,30 @@ var TestNet3Params = Params{
 			),
 		},
 		DeploymentCSV: {
-			BitNumber: 0,
+			BitNumber: 27,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1749107593, 0),
+				time.Time{}, // Always available for vote
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1749108000, 0),
+				time.Time{}, // Always available for vote
 			),
 		},
 		DeploymentSegwit: {
-			BitNumber: 1,
+			BitNumber: 27,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1749108000, 0),
+				time.Time{}, // Always available for vote
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1749109000, 0),
+				time.Time{}, // Always available for vote
 			),
 		},
 		DeploymentTaproot: {
-			BitNumber: 2,
+			BitNumber: 27,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Unix(1749110000, 0),
+				time.Time{}, // Always available for vote
 			),
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Unix(1749111000, 0),
+				time.Time{}, // Always available for vote
 			),
 		},
 	},
