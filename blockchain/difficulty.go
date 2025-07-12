@@ -147,17 +147,16 @@ func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time, c Ch
 		return c.ChainParams().PowLimitBits, nil
 	}
 
-	// // Get the block node at the previous retarget (targetTimespan days
-	// // worth of blocks).
-	// firstNode := lastNode.RelativeAncestorCtx(c.BlocksPerRetarget() - 1)
-	firstNode := lastNode.RelativeAncestorCtx(1)
+	// Get the block node at 100 blocks ago for difficulty calculation
+	// based on historical 100 blocks instead of just the previous block
+	const difficultyBlocks = 100
+	firstNode := lastNode.RelativeAncestorCtx(difficultyBlocks)
 	if firstNode == nil {
-		return 0, AssertError("unable to obtain previous retarget block")
+		return 0, AssertError("unable to obtain block 100 blocks ago for difficulty calculation")
 	}
 
-	// Limit the amount of adjustment that can occur to the previous
-	// difficulty.
-	actualTimespan := lastNode.Timestamp() - firstNode.Timestamp()
+	// Calculate the actual timespan over the last 100 blocks
+	actualTimespan := (lastNode.Timestamp() - firstNode.Timestamp()) / difficultyBlocks
 
 	adjustedTimespan := actualTimespan
 	if actualTimespan < c.MinRetargetTimespan() {
@@ -176,7 +175,8 @@ func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time, c Ch
 	}
 
 	// Calculate new target difficulty as:
-	//  currentDifficulty * (adjustedTimespan / targetTimespan)
+	//  currentDifficulty * (adjustedTimespan / expectedTimespan)
+	// For 100 blocks, expected timespan = 100 * target time per block
 	// The result uses integer division which means it will be slightly
 	// rounded down.  Flokicoind also uses integer division to calculate this
 	// result.
@@ -194,10 +194,10 @@ func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time, c Ch
 	// newTarget since conversion to the compact representation loses
 	// precision.
 	newTargetBits := BigToCompact(newTarget)
-	log.Debugf("Difficulty retarget at block height %d", lastNode.Height()+1)
+	log.Debugf("Difficulty retarget at block height %d (based on last %d blocks)", lastNode.Height()+1, difficultyBlocks)
 	log.Debugf("Old target %08x (%064x)", lastNode.Bits(), oldTarget)
 	log.Debugf("New target %08x (%064x)", newTargetBits, CompactToBig(newTargetBits))
-	log.Debugf("Actual timespan %v, adjusted timespan %v, target timespan %v",
+	log.Debugf("Actual timespan %v, adjusted timespan %v, expected timespan %v",
 		time.Duration(actualTimespan)*time.Second,
 		time.Duration(adjustedTimespan)*time.Second,
 		c.ChainParams().TargetTimespan)
