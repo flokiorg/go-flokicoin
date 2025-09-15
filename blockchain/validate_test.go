@@ -67,7 +67,6 @@ func TestSequenceLocksActive(t *testing.T) {
 // TestCheckConnectBlockTemplate tests the CheckConnectBlockTemplate function to
 // ensure it fails.
 func TestCheckConnectBlockTemplate(t *testing.T) {
-	return // #FLOKI_CHANGE
 
 	// Create a new database and chain instance to run tests against.
 	chain, teardownFunc, err := chainSetup("checkconnectblocktemplate",
@@ -86,8 +85,7 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 	// (genesis block) -> 1 -> 2 -> 3 -> 4
 	//                          \-> 3a
 	testFiles := []string{
-		"blk_0_to_4.dat.bz2",
-		"blk_3A.dat.bz2",
+		"blk_0_to_10000.dat.bz2",
 	}
 
 	var blocks []*chainutil.Block
@@ -98,6 +96,7 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 		}
 		blocks = append(blocks, blockTmp...)
 	}
+	t.Logf("blocks: %d", len(blocks))
 
 	for i := 1; i <= 3; i++ {
 		isMainChain, _, err := chain.ProcessBlock(blocks[i], BFNone)

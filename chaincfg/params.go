@@ -187,10 +187,6 @@ type Params struct {
 	// regtest like networks.
 	PoWNoRetargeting bool
 
-	// EnforceBIP94 enforces timewarp attack mitigation and on testnet4
-	// this also enforces the block storm mitigation.
-	EnforceBIP94 bool
-
 	// These fields define the block heights at which the specified softfork
 	// BIP became active.
 	BIP0034Height int32
@@ -225,12 +221,6 @@ type Params struct {
 	// passed without finding a block.  This is really only useful for test
 	// networks and should not be set on a main network.
 	ReduceMinDifficulty bool
-
-	// MinDiffReductionTime is the amount of time after which the minimum
-	// required difficulty should be reduced when a block hasn't been found.
-	//
-	// NOTE: This only applies if ReduceMinDifficulty is true.
-	MinDiffReductionTime time.Duration
 
 	// GenerateSupported specifies whether or not CPU mining is allowed.
 	GenerateSupported bool
@@ -281,6 +271,12 @@ type Params struct {
 	AuxpowChainId         int32
 	AuxpowHeightEffective int32
 	AuxpowStrictChainId   bool
+
+	// Block height at which Digishield difficulty retargeting rules take effect.
+	// Before this height, legacy retargeting is used.
+	// At and after this height, per-block Digishield adjustments with
+	// amplitude filtering and clamping are applied.
+	DigishieldActivationHeight int32
 }
 
 // MainNetParams defines the network parameters for the main Flokicoin network.
@@ -294,21 +290,21 @@ var MainNetParams = Params{
 	},
 
 	// Chain parameters
-	GenesisBlock:             &mainGenesisBlock,
-	GenesisHash:              &mainGenesisHash,
-	PowLimit:                 mainPowLimit,
-	PowLimitBits:             0x1f00ffff,
-	BIP0034Height:            1,
-	BIP0065Height:            1,
-	BIP0066Height:            1,
-	CoinbaseMaturity:         300,             // 300 => 5h
-	SubsidyReductionInterval: 210_000,         // interval of blocks before halving = 5 months
-	TargetTimespan:           time.Minute * 1, // 1 minute
-	TargetTimePerBlock:       time.Minute * 1, // 1 minute
-	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
-	ReduceMinDifficulty:      false,
-	MinDiffReductionTime:     0,
-	GenerateSupported:        false,
+	GenesisBlock:               &mainGenesisBlock,
+	GenesisHash:                &mainGenesisHash,
+	PowLimit:                   mainPowLimit,
+	PowLimitBits:               0x1f00ffff,
+	BIP0034Height:              1,
+	BIP0065Height:              1,
+	BIP0066Height:              1,
+	CoinbaseMaturity:           300,             // 300 => 5h
+	SubsidyReductionInterval:   210_000,         // interval of blocks before halving = 5 months
+	TargetTimespan:             time.Minute * 1, // 1 minute
+	TargetTimePerBlock:         time.Minute * 1, // 1 minute
+	RetargetAdjustmentFactor:   4,               // 25% less, 400% more
+	GenerateSupported:          false,
+	ReduceMinDifficulty:        false,
+	DigishieldActivationHeight: 115_000,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{
@@ -330,13 +326,20 @@ var MainNetParams = Params{
 		{23865, newHashFromStr("b636660d20743bb1debd0b3254c5117a11b1ed9c8a66aa267b23e76419e606c8")},
 	},
 
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
+    // Consensus rule change deployments.
+    //
+    // Version-bits signaling guidelines for BitNumber to avoid overlap:
+    // - Allowed: 0–7, 9–15, 22–28
+    // - Reserved: 8 (AuxPoW flag), 16–21 (ChainID field), 29–31 (vbTopBits marker)
+    //
+    // The miner confirmation window is defined as:
+    //   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 6840, // 95% of MinerConfirmationWindow
 	MinerConfirmationWindow:       7200, // 5 days
-	Deployments: [DefinedDeployments]ConsensusDeployment{
+    // Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
+    // Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
+    // Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
+    Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
@@ -388,7 +391,7 @@ var MainNetParams = Params{
 
 	// AuxPoW parameters
 	AuxpowChainId:         0x21, // 33
-	AuxpowHeightEffective: 115_841,
+	AuxpowHeightEffective: 115_840,
 	AuxpowStrictChainId:   true,
 
 	// Mempool parameters
@@ -424,23 +427,22 @@ var RegressionNetParams = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	GenesisBlock:             &regTestGenesisBlock,
-	GenesisHash:              &regTestGenesisHash,
-	PowLimit:                 regressionPowLimit,
-	PowLimitBits:             0x207fffff,
-	CoinbaseMaturity:         100,       // must be same as in blockchain full tests
-	BIP0034Height:            100000000, // Not active - Permit ver 1 blocks
-	BIP0065Height:            1351,      // Used by regression tests
-	BIP0066Height:            1251,      // Used by regression tests
-	SubsidyReductionInterval: 150,
-	TargetTimespan:           time.Minute * 1, // 1 minute
-	TargetTimePerBlock:       time.Minute * 1, // 1 minute
-	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
-	EnforceBIP94:             true,
-	PoWNoRetargeting:         true,
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
+	GenesisBlock:               &regTestGenesisBlock,
+	GenesisHash:                &regTestGenesisHash,
+	PowLimit:                   regressionPowLimit,
+	PowLimitBits:               0x207fffff,
+	CoinbaseMaturity:           100,       // must be same as in blockchain full tests
+	BIP0034Height:              100000000, // Not active - Permit ver 1 blocks
+	BIP0065Height:              1351,      // Used by regression tests
+	BIP0066Height:              1251,      // Used by regression tests
+	SubsidyReductionInterval:   150,
+	TargetTimespan:             time.Minute * 1, // 1 minute
+	TargetTimePerBlock:         time.Minute * 1, // 1 minute
+	RetargetAdjustmentFactor:   4,               // 25% less, 400% more
+	PoWNoRetargeting:           true,
+	ReduceMinDifficulty:        true,
+	GenerateSupported:          true,
+	DigishieldActivationHeight: 0,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
@@ -449,8 +451,9 @@ var RegressionNetParams = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 108, // 75%  of MinerConfirmationWindow
-	MinerConfirmationWindow:       144,
+	RuleChangeActivationThreshold: 1, // 75%  of MinerConfirmationWindow
+	MinerConfirmationWindow:       3,
+	// Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
@@ -462,9 +465,7 @@ var RegressionNetParams = Params{
 			),
 		},
 		DeploymentTestDummyMinActivation: {
-			BitNumber:                 22,
-			CustomActivationThreshold: 72,  // Only needs 50% hash rate.
-			MinActivationHeight:       600, // Can only activate after height 600.
+			BitNumber: 22,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
 				time.Time{}, // Always available for vote
 			),
@@ -498,7 +499,6 @@ var RegressionNetParams = Params{
 			DeploymentEnder: NewMedianTimeDeploymentEnder(
 				time.Time{}, // Never expires.
 			),
-			CustomActivationThreshold: 108, // Only needs 75% hash rate.
 		},
 	},
 
@@ -538,32 +538,31 @@ var TestNet3Params = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	GenesisBlock:             &testNet3GenesisBlock,
-	GenesisHash:              &testNet3GenesisHash,
-	PowLimit:                 testNet3PowLimit,
-	PowLimitBits:             0x207fffff,
-	BIP0034Height:            1,
-	BIP0065Height:            1,
-	BIP0066Height:            1,
-	CoinbaseMaturity:         100, // must be same as maturity unit tests
-	SubsidyReductionInterval: 210_000,
-	TargetTimespan:           time.Minute * 1, // 1 minute
-	TargetTimePerBlock:       time.Minute * 1, // 1 minute
-	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 2, // 2 minute
-	GenerateSupported:        true,
-	PoWNoRetargeting:         true, // temporarily activated
+	GenesisBlock:               &testNet3GenesisBlock,
+	GenesisHash:                &testNet3GenesisHash,
+	PowLimit:                   testNet3PowLimit,
+	PowLimitBits:               0x207fffff,
+	BIP0034Height:              1,
+	BIP0065Height:              1,
+	BIP0066Height:              1,
+	CoinbaseMaturity:           100, // must be same as maturity unit tests
+	SubsidyReductionInterval:   210_000,
+	TargetTimespan:             time.Minute * 1, // 1 minute
+	TargetTimePerBlock:         time.Minute * 1, // 1 minute
+	RetargetAdjustmentFactor:   4,               // 25% less, 400% more
+	ReduceMinDifficulty:        true,
+	GenerateSupported:          true,
+	PoWNoRetargeting:           false,
+	DigishieldActivationHeight: 0,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},
 
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 75,  // 95% of MinerConfirmationWindow
-	MinerConfirmationWindow:       500, // x days
+    // Consensus rule change deployments.
+    // For testnet, auto-activate deployments without signalling by
+    // setting a 1-block window and 0 threshold.
+    RuleChangeActivationThreshold: 0,
+    MinerConfirmationWindow:       1,
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
@@ -583,38 +582,38 @@ var TestNet3Params = Params{
 				time.Time{}, // Never expires
 			),
 		},
-		DeploymentCSV: {
-			BitNumber: 27,
-			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Time{}, // Always available for vote
-			),
-			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Time{}, // Always available for vote
-			),
-		},
-		DeploymentSegwit: {
-			BitNumber: 27,
-			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Time{}, // Always available for vote
-			),
-			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Time{}, // Always available for vote
-			),
-		},
-		DeploymentTaproot: {
-			BitNumber: 27,
-			DeploymentStarter: NewMedianTimeDeploymentStarter(
-				time.Time{}, // Always available for vote
-			),
-			DeploymentEnder: NewMedianTimeDeploymentEnder(
-				time.Time{}, // Always available for vote
-			),
-		},
+        DeploymentCSV: {
+            BitNumber: 0,
+            DeploymentStarter: NewMedianTimeDeploymentStarter(
+                time.Time{}, // Always available for vote
+            ),
+            DeploymentEnder: NewMedianTimeDeploymentEnder(
+                time.Time{}, // Always available for vote
+            ),
+        },
+        DeploymentSegwit: {
+            BitNumber: 1,
+            DeploymentStarter: NewMedianTimeDeploymentStarter(
+                time.Time{}, // Always available for vote
+            ),
+            DeploymentEnder: NewMedianTimeDeploymentEnder(
+                time.Time{}, // Always available for vote
+            ),
+        },
+        DeploymentTaproot: {
+            BitNumber: 2,
+            DeploymentStarter: NewMedianTimeDeploymentStarter(
+                time.Time{}, // Always available for vote
+            ),
+            DeploymentEnder: NewMedianTimeDeploymentEnder(
+                time.Time{}, // Always available for vote
+            ),
+        },
 	},
 
 	// AuxPoW parameters
 	AuxpowChainId:         0x21,
-	AuxpowHeightEffective: 115_841,
+	AuxpowHeightEffective: 1,
 	AuxpowStrictChainId:   true,
 
 	// Mempool parameters
@@ -649,22 +648,21 @@ var TestNet4Params = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	GenesisBlock:             &testNet4GenesisBlock,
-	GenesisHash:              &testNet4GenesisHash,
-	PowLimit:                 testNet3PowLimit,
-	PowLimitBits:             0x1d00ffff,
-	EnforceBIP94:             true,
-	BIP0034Height:            1,
-	BIP0065Height:            1,
-	BIP0066Height:            1,
-	CoinbaseMaturity:         100,
-	SubsidyReductionInterval: 210000,
-	TargetTimespan:           time.Hour * 24 * 14, // 14 days
-	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
-	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
-	GenerateSupported:        false,
+	GenesisBlock:               &testNet4GenesisBlock,
+	GenesisHash:                &testNet4GenesisHash,
+	PowLimit:                   testNet3PowLimit,
+	PowLimitBits:               0x1d00ffff,
+	BIP0034Height:              1,
+	BIP0065Height:              1,
+	BIP0066Height:              1,
+	CoinbaseMaturity:           100,
+	SubsidyReductionInterval:   210000,
+	TargetTimespan:             time.Hour * 24 * 14, // 14 days
+	TargetTimePerBlock:         time.Minute * 10,    // 10 minutes
+	RetargetAdjustmentFactor:   4,                   // 25% less, 400% more
+	ReduceMinDifficulty:        true,
+	GenerateSupported:          false,
+	DigishieldActivationHeight: 0,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},
@@ -763,21 +761,21 @@ var SimNetParams = Params{
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
-	GenesisBlock:             &simNetGenesisBlock,
-	GenesisHash:              &simNetGenesisHash,
-	PowLimit:                 simNetPowLimit,
-	PowLimitBits:             0x207fffff,
-	BIP0034Height:            1, // Always active on simnet
-	BIP0065Height:            1, // Always active on simnet
-	BIP0066Height:            1, // Always active on simnet
-	CoinbaseMaturity:         100,
-	SubsidyReductionInterval: 210_000,
-	TargetTimespan:           time.Minute * 1, // 1 minute
-	TargetTimePerBlock:       time.Minute * 1, // 1 minute
-	RetargetAdjustmentFactor: 4,               // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
+	GenesisBlock:               &simNetGenesisBlock,
+	GenesisHash:                &simNetGenesisHash,
+	PowLimit:                   simNetPowLimit,
+	PowLimitBits:               0x207fffff,
+	BIP0034Height:              1, // Always active on simnet
+	BIP0065Height:              1, // Always active on simnet
+	BIP0066Height:              1, // Always active on simnet
+	CoinbaseMaturity:           100,
+	SubsidyReductionInterval:   210_000,
+	TargetTimespan:             time.Minute * 1, // 1 minute
+	TargetTimePerBlock:         time.Minute * 1, // 1 minute
+	RetargetAdjustmentFactor:   4,               // 25% less, 400% more
+	ReduceMinDifficulty:        true,
+	GenerateSupported:          true,
+	DigishieldActivationHeight: 0,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
@@ -909,7 +907,6 @@ func CustomSignetParams(challenge []byte, dnsSeeds []DNSSeed) Params {
 		TargetTimePerBlock:       time.Minute * 1, // 1 minute
 		RetargetAdjustmentFactor: 4,               // 25% less, 400% more
 		ReduceMinDifficulty:      false,
-		MinDiffReductionTime:     time.Minute * 2, // TargetTimePerBlock * 2
 		GenerateSupported:        false,
 
 		// Checkpoints ordered from oldest to newest.
@@ -921,6 +918,7 @@ func CustomSignetParams(challenge []byte, dnsSeeds []DNSSeed) Params {
 		//   target proof of work timespan / target proof of work spacing
 		RuleChangeActivationThreshold: 1916, // 95% of 2016
 		MinerConfirmationWindow:       2016,
+		// Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
 		Deployments: [DefinedDeployments]ConsensusDeployment{
 			DeploymentTestDummy: {
 				BitNumber: 28,

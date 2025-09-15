@@ -91,21 +91,21 @@ var regressionNetParams = &chaincfg.Params{
 	DefaultPort: "35212",
 
 	// Chain parameters
-	GenesisBlock:             &regTestGenesisBlock,
-	GenesisHash:              newHashFromStr("fe35ecff929d98563ca9157264217f18d7f1662455d975ba661fe2ae25edec1c"),
-	PowLimit:                 regressionPowLimit,
-	PowLimitBits:             0x207fffff,
-	CoinbaseMaturity:         100,
-	BIP0034Height:            100000000, // Not active - Permit ver 1 blocks
-	BIP0065Height:            1351,      // Used by regression tests
-	BIP0066Height:            1251,      // Used by regression tests
-	SubsidyReductionInterval: 150,
-	TargetTimespan:           time.Minute * 1,
-	TargetTimePerBlock:       time.Minute * 1,
-	RetargetAdjustmentFactor: 4, // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
+	GenesisBlock:               &regTestGenesisBlock,
+	GenesisHash:                newHashFromStr("fe35ecff929d98563ca9157264217f18d7f1662455d975ba661fe2ae25edec1c"),
+	PowLimit:                   regressionPowLimit,
+	PowLimitBits:               0x207fffff,
+	CoinbaseMaturity:           100,
+	BIP0034Height:              100000000, // Not active - Permit ver 1 blocks
+	BIP0065Height:              1351,      // Used by regression tests
+	BIP0066Height:              1251,      // Used by regression tests
+	SubsidyReductionInterval:   150,
+	TargetTimespan:             time.Minute * 1,
+	TargetTimePerBlock:         time.Minute * 1,
+	RetargetAdjustmentFactor:   4, // 25% less, 400% more
+	ReduceMinDifficulty:        true,
+	GenerateSupported:          true,
+	DigishieldActivationHeight: 0,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,

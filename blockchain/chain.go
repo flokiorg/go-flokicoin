@@ -1469,13 +1469,25 @@ func (b *BlockChain) ChainTips() []ChainTip {
 // error if it doesn't exist. Note that this will return headers from both the
 // main and side chains.
 func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (wire.BlockHeader, error) {
-	node := b.index.LookupNode(hash)
-	if node == nil {
-		err := fmt.Errorf("block %s is not known", hash)
-		return wire.BlockHeader{}, err
-	}
+    node := b.index.LookupNode(hash)
+    if node == nil {
+        err := fmt.Errorf("block %s is not known", hash)
+        return wire.BlockHeader{}, err
+    }
 
-	return node.Header(), nil
+    // Start with the base header stored in the index.
+    hdr := node.Header()
+
+    // If this is an AuxPoW header and the payload is not attached, attempt to
+    // hydrate it from the database so callers that need to serialize the full
+    // header do not fail.
+    if hdr.AuxPow() && hdr.AuxPowHeader == nil {
+        if aph, ok, err := b.LoadAuxPowHeader(hash); err == nil && ok && aph != nil {
+            hdr.AuxPowHeader = aph
+        }
+    }
+
+    return hdr, nil
 }
 
 // MainChainHasBlock returns whether or not the block with the given hash is in

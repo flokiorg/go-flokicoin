@@ -165,23 +165,6 @@ func (b *BlockChain) ProcessBlock(block *chainutil.Block, flags BehaviorFlags) (
 		return false, false, ruleError(ErrDuplicateBlock, str)
 	}
 
-	msgBlock := block.MsgBlock()
-	header := &msgBlock.Header
-
-	if !header.IsLegacy() && block.Height() >= b.chainParams.AuxpowHeightEffective && b.chainParams.AuxpowStrictChainId && header.GetChainID() != b.chainParams.AuxpowChainId {
-		return false, false, ruleError(ErrAuxpowNotAllowed, fmt.Sprintf("block does not have our chain ID (got %d, expected %d, full Version %d)",
-			header.GetChainID(), b.chainParams.AuxpowChainId, header.Version))
-	}
-
-	if header.AuxPow() && b.chainParams.AuxpowStrictChainId && header.AuxPowHeader.ParentBlockHeader.GetChainID() == header.GetChainID() {
-		return false, false, ruleError(ErrAuxpowNotAllowed, "Aux POW parent has our chain ID")
-	}
-
-	if header.AuxPow() && block.Height() < b.chainParams.AuxpowHeightEffective {
-		return false, false, ruleError(ErrAuxpowNotAllowed, fmt.Sprintf("auxpow blocks are not allowed at height %d, auxpow is effective from %d",
-			block.Height(), b.chainParams.AuxpowHeightEffective))
-	}
-
 	// Perform preliminary sanity checks on the block and its transactions.
 	err = checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
 	if err != nil {

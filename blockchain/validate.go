@@ -328,8 +328,7 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 	// The target difficulty must be larger than zero.
 	target := CompactToBig(header.Bits)
 	if target.Sign() <= 0 {
-		str := fmt.Sprintf("block target difficulty of %064x is too low",
-			target)
+		str := fmt.Sprintf("block target difficulty of %064x is too low", target)
 		return ruleError(ErrUnexpectedDifficulty, str)
 	}
 
@@ -346,7 +345,6 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 		return nil
 	}
 	// The block hash must be less than the claimed target.
-	// hash := header.BlockHash() #FLOKI_CHANGE
 	if header.AuxPowHeader == nil {
 		if header.AuxPow() {
 			return ruleError(ErrAuxpowNoVersion, "no auxpow on block with auxpow version")
@@ -370,7 +368,7 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 		hash := header.AuxPowHeader.ParentBlockHeader.BlockPoWHash()
 		hashNum := HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
-			str := fmt.Sprintf("auxpow failed, parent block hash of %064x is higher than "+
+			str := fmt.Sprintf("aux proof of work failed, parent block hash of %064x is higher than "+
 				"expected max of %064x", hashNum, target)
 			return ruleError(ErrHighHash, str)
 		}
@@ -380,6 +378,38 @@ func checkProofOfWork(header *wire.BlockHeader, powLimit *big.Int, flags Behavio
 		return err
 	}
 
+	return nil
+}
+
+// checkAuxpowPolicy performs auxpow-related policy checks that depend on
+// network parameters and block height. Returns a ruleError on violation.
+func checkAuxpowPolicy(header *wire.BlockHeader, height int32, params *chaincfg.Params) error {
+	// Reject auxpow headers before auxpow becomes effective.
+	if header.AuxPow() && height < params.AuxpowHeightEffective {
+		return ruleError(ErrAuxpowNotAllowed, fmt.Sprintf(
+			"auxpow blocks are not allowed at height %d, auxpow is effective from %d",
+			height, params.AuxpowHeightEffective,
+		))
+	}
+
+	if params.AuxpowStrictChainId {
+		chainID := header.GetChainID()
+
+		// Once auxpow is effective and the header is not legacy, the chain ID must match.
+		if !header.IsLegacy() && height >= params.AuxpowHeightEffective && chainID != params.AuxpowChainId {
+			return ruleError(ErrAuxpowNotAllowed, fmt.Sprintf(
+				"block does not have our chain ID (got %d, expected %d, full Version %d)",
+				chainID, params.AuxpowChainId, header.Version,
+			))
+		}
+
+		// Parent block in auxpow must not have the same chain ID as the child.
+		if header.AuxPow() {
+			if header.AuxPowHeader != nil && header.AuxPowHeader.ParentBlockHeader.GetChainID() == chainID {
+				return ruleError(ErrAuxpowNotAllowed, "Aux POW parent has our chain ID")
+			}
+		}
+	}
 	return nil
 }
 
@@ -758,18 +788,11 @@ func CheckBlockHeaderContext(header *wire.BlockHeader, prevNode HeaderCtx,
 			return ruleError(ErrTimeTooOld, str)
 		}
 
-		// Testnet4 only: Check timestamp against prev for
-		// difficulty-adjustment blocks to prevent timewarp attacks.
-		if params.EnforceBIP94 {
-			err := assertNoTimeWarp(
-				blockHeight, c.BlocksPerRetarget(),
-				header.Timestamp,
-				time.Unix(prevNode.Timestamp(), 0),
-			)
-			if err != nil {
-				return err
-			}
-		}
+	}
+
+	// Enforce AuxPoW policy with accurate height context.
+	if err := checkAuxpowPolicy(header, blockHeight, c.ChainParams()); err != nil {
+		return err
 	}
 
 	// Reject outdated block versions once a majority of the network

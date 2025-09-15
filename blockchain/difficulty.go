@@ -13,6 +13,23 @@ import (
 	"github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
 )
 
+const (
+	// Move 12.5% toward the observed spacing each block (8 => 1/8).
+	DigishieldAmplitudeDivisor int64 = 8
+
+	// Lower clamp as a rational of the target spacing: 3/4 => 0.75 * target.
+	DigishieldClampMinNum int64 = 3
+	DigishieldClampMinDen int64 = 4
+
+	// Upper clamp as a rational of the target spacing: 3/2 => 1.5 * target.
+	DigishieldClampMaxNum int64 = 3
+	DigishieldClampMaxDen int64 = 2
+
+	// “Late block” multiple of the target spacing that permits a min-difficulty
+	// block when that feature is enabled (2 => later than 2× target spacing).
+	DigishieldLateBlockMultiple int64 = 60
+)
+
 // HashToBig converts a chainhash.Hash into a big.Int that can be used to
 // perform math comparisons.
 func HashToBig(hash *chainhash.Hash) *big.Int {
@@ -77,14 +94,10 @@ func (b *BlockChain) calcEasiestDifficulty(bits uint32, duration time.Duration) 
 	// Convert types used in the calculations below.
 	durationVal := int64(duration / time.Second)
 	adjustmentFactor := big.NewInt(b.chainParams.RetargetAdjustmentFactor)
+	targetSeconds := int64(b.chainParams.TargetTimePerBlock / time.Second)
 
-	// The test network rules allow minimum difficulty blocks after more
-	// than twice the desired amount of time needed to generate a block has
-	// elapsed.
 	if b.chainParams.ReduceMinDifficulty {
-		reductionTime := int64(b.chainParams.MinDiffReductionTime /
-			time.Second)
-		if durationVal > reductionTime {
+		if durationVal > DigishieldLateBlockMultiple*targetSeconds {
 			return b.chainParams.PowLimitBits
 		}
 	}
@@ -142,22 +155,97 @@ func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time, c Ch
 		return c.ChainParams().PowLimitBits, nil
 	}
 
-	// Genesis block.
-	if lastNode == nil || lastNode.Height() <= 2 {
+	// Genesis
+	if lastNode == nil {
 		return c.ChainParams().PowLimitBits, nil
 	}
 
-	// // Get the block node at the previous retarget (targetTimespan days
-	// // worth of blocks).
-	// firstNode := lastNode.RelativeAncestorCtx(c.BlocksPerRetarget() - 1)
-	firstNode := lastNode.RelativeAncestorCtx(1)
-	if firstNode == nil {
-		return 0, AssertError("unable to obtain previous retarget block")
+	heightNext := lastNode.Height() + 1
+	if heightNext <= 5 { // the 5 blocks
+		return c.ChainParams().PowLimitBits, nil
+	}
+
+	// Digishield
+	if heightNext >= c.ChainParams().DigishieldActivationHeight {
+		return calcNextWorkDigishield(lastNode, newBlockTime, c)
+	}
+
+	//  Legacy
+	return calcNextWorkLegacy(lastNode, newBlockTime, c)
+
+}
+
+// calcNextWorkDigishield implements Dogecoin's Digishield:
+// per-block retarget, raw timestamps, amplitude filter, and clamping.
+func calcNextWorkDigishield(lastNode HeaderCtx, newBlockTime time.Time, c ChainCtx) (uint32, error) {
+	params := c.ChainParams()
+	targetSeconds := int64(params.TargetTimePerBlock / time.Second)
+	nextHeight := lastNode.Height() + 1
+
+	// If enabled (typically on testnets), allow a block to be mined at
+	// minimum difficulty when its timestamp is more than
+	// DigishieldLateBlockMultiple × target spacing after the previous block.
+	// This prevents the chain from stalling in low-hash environments.
+	if params.ReduceMinDifficulty {
+		lateThreshold := lastNode.Timestamp() + DigishieldLateBlockMultiple*targetSeconds
+		if newBlockTime.Unix() > lateThreshold {
+			return params.PowLimitBits, nil
+		}
+	}
+
+	// Use the direct parent.
+	prevNode := lastNode.RelativeAncestorCtx(1)
+	if prevNode == nil {
+		return 0, AssertError("unable to obtain previous block for retarget")
+	}
+
+	// Raw header timestamps.
+	actualTimespan := lastNode.Timestamp() - prevNode.Timestamp()
+
+	// Amplitude filter: modulated = target + (actual - target) / divisor.
+	modulatedTimespan := targetSeconds + (actualTimespan-targetSeconds)/DigishieldAmplitudeDivisor
+
+	// Clamp to [0.75T, 1.5T].
+	minTimespan := (targetSeconds * DigishieldClampMinNum) / DigishieldClampMinDen
+	maxTimespan := (targetSeconds * DigishieldClampMaxNum) / DigishieldClampMaxDen
+	if modulatedTimespan < minTimespan {
+		modulatedTimespan = minTimespan
+	} else if modulatedTimespan > maxTimespan {
+		modulatedTimespan = maxTimespan
+	}
+
+	// Scale old target and cap to PowLimit.
+	oldTarget := CompactToBig(lastNode.Bits())
+	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(modulatedTimespan))
+	newTarget.Div(newTarget, big.NewInt(targetSeconds))
+	if newTarget.Cmp(params.PowLimit) > 0 {
+		newTarget.Set(params.PowLimit)
+	}
+
+	newBits := BigToCompact(newTarget)
+	log.Debugf(
+		"Digishield @%d old=%08x new=%08x actual=%ds mod=%ds target=%ds ampDiv=%d clamp=[%d/%d..%d/%d] lateMult=%dx",
+		nextHeight, lastNode.Bits(), newBits,
+		actualTimespan, modulatedTimespan, targetSeconds,
+		DigishieldAmplitudeDivisor,
+		DigishieldClampMinNum, DigishieldClampMinDen,
+		DigishieldClampMaxNum, DigishieldClampMaxDen,
+		DigishieldLateBlockMultiple,
+	)
+	return newBits, nil
+}
+
+// calcNextWorkLegacy: simple per-block scaling with generic clamps.
+func calcNextWorkLegacy(lastNode HeaderCtx, _ time.Time, c ChainCtx) (uint32, error) {
+	// Per-block retarget: use the direct parent for timing comparison.
+	prev := lastNode.RelativeAncestorCtx(1)
+	if prev == nil {
+		return 0, AssertError("unable to obtain previous block for retarget")
 	}
 
 	// Limit the amount of adjustment that can occur to the previous
 	// difficulty.
-	actualTimespan := lastNode.Timestamp() - firstNode.Timestamp()
+	actualTimespan := lastNode.Timestamp() - prev.Timestamp()
 
 	adjustedTimespan := actualTimespan
 	if actualTimespan < c.MinRetargetTimespan() {
@@ -166,14 +254,7 @@ func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time, c Ch
 		adjustedTimespan = c.MaxRetargetTimespan()
 	}
 
-	// Special difficulty rule for Testnet4
 	oldTarget := CompactToBig(lastNode.Bits())
-	if c.ChainParams().EnforceBIP94 {
-		// Here we use the first block of the difficulty period. This way
-		// the real difficulty is always preserved in the first block as
-		// it is not allowed to use the min-difficulty exception.
-		oldTarget = CompactToBig(firstNode.Bits())
-	}
 
 	// Calculate new target difficulty as:
 	//  currentDifficulty * (adjustedTimespan / targetTimespan)
@@ -194,7 +275,7 @@ func calcNextRequiredDifficulty(lastNode HeaderCtx, newBlockTime time.Time, c Ch
 	// newTarget since conversion to the compact representation loses
 	// precision.
 	newTargetBits := BigToCompact(newTarget)
-	log.Debugf("Difficulty retarget at block height %d", lastNode.Height()+1)
+	log.Debugf("Per-block difficulty retarget at block height %d", lastNode.Height()+1)
 	log.Debugf("Old target %08x (%064x)", lastNode.Bits(), oldTarget)
 	log.Debugf("New target %08x (%064x)", newTargetBits, CompactToBig(newTargetBits))
 	log.Debugf("Actual timespan %v, adjusted timespan %v, target timespan %v",
