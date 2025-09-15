@@ -188,3 +188,40 @@ const (
 	ErrRPCNoWallet      RPCErrorCode = -1
 	ErrRPCUnimplemented RPCErrorCode = -1
 )
+
+// AuxPoW-related RPC error codes.
+// These mirror the style of Bitcoin Core / Namecoin auxpow errors, but
+// use the btcd-style RPCErrorCode type.
+const (
+	// ErrRPCAuxNotSupported indicates createauxblock/submitauxblock
+	// were called on a network that does not allow AuxPoW.
+	ErrRPCAuxNotSupported RPCErrorCode = -100
+
+	// ErrRPCAuxCandidateExpired means the aux candidate requested has
+	// expired due to a new tip or timeout.
+	ErrRPCAuxCandidateExpired RPCErrorCode = -101
+
+	// ErrRPCAuxUnknownHash means the given hash was not created by
+	// createauxblock (unknown candidate).
+	ErrRPCAuxUnknownHash RPCErrorCode = -102
+
+	// ErrRPCAuxInvalidAuxPow indicates that the provided auxpow data
+	// could not be decoded or had malformed structure.
+	ErrRPCAuxInvalidAuxPow RPCErrorCode = -103
+
+	// ErrRPCAuxTargetMismatch means the provided auxpow does not
+	// satisfy the child target recorded in the candidate.
+	ErrRPCAuxTargetMismatch RPCErrorCode = -104
+
+	// ErrRPCAuxCommitmentMismatch means the auxpow parent coinbase
+	// does not commit to the expected child hash/chain ID.
+	ErrRPCAuxCommitmentMismatch RPCErrorCode = -105
+
+	// ErrRPCAuxChainIDMismatch means the auxpow is committing for
+	// another chain ID, not this one.
+	ErrRPCAuxChainIDMismatch RPCErrorCode = -106
+
+	// ErrRPCAuxInternal is a catch-all for unexpected internal errors
+	// in auxpow processing.
+	ErrRPCAuxInternal RPCErrorCode = -110
+)

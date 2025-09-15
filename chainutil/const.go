@@ -13,8 +13,9 @@ const (
 	LokiPerFlokicoin = 1e8
 
 	// MaxLoki is the maximum transaction amount allowed in loki and is the maximum number of loki
-	// in circulation over the first five years.
+	// in circulation over the first ~5 years.
 	// ⚠️ Recalculate and update this value every five years to reflect new issuance.
 	// TODO: Replace this hardcoded value with a dynamic calculation based on the current block height and reward schedule.
-	MaxLoki = 442_165_500 * LokiPerFlokicoin
+	MaxLoki = 5e8 * LokiPerFlokicoin
+	// MaxLoki = 21e6 * LokiPerFlokicoin
 )

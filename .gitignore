@@ -55,3 +55,4 @@ chainutil/psbt/coverage.txt
 
 
 .vscode
+.gocache

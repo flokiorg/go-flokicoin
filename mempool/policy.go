@@ -7,6 +7,7 @@ package mempool
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/flokiorg/go-flokicoin/blockchain"
@@ -273,7 +274,16 @@ func IsDust(txOut *wire.TxOut, minRelayTxFee chainutil.Amount) bool {
 	//
 	// The following is equivalent to (value/totalSize) * (1/3) * 1000
 	// without needing to do floating point math.
-	return txOut.Value*1000/GetDustThreshold(txOut) < int64(minRelayTxFee)
+
+	value := big.NewInt(txOut.Value)
+	threshold := big.NewInt(int64(GetDustThreshold(txOut)))
+
+	// value * 1000 / threshold
+	dustRatio := value.Mul(value, big.NewInt(1000))
+	dustRatio.Div(dustRatio, threshold)
+
+	// Compare to minRelayTxFee
+	return dustRatio.Cmp(big.NewInt(int64(minRelayTxFee))) < 0
 }
 
 // CheckTransactionStandard performs a series of checks on a transaction to

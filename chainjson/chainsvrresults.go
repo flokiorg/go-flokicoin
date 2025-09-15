@@ -75,25 +75,54 @@ type GetBlockStatsResult struct {
 // getblock returns an object whose tx field is an array of raw transactions.
 // Use GetBlockVerboseTxResult to unmarshal data received from passing verbose=2 to getblock.
 type GetBlockVerboseResult struct {
-	Hash          string        `json:"hash"`
-	Confirmations int64         `json:"confirmations"`
-	StrippedSize  int32         `json:"strippedsize"`
-	Size          int32         `json:"size"`
-	Weight        int32         `json:"weight"`
-	Height        int64         `json:"height"`
-	Version       int32         `json:"version"`
-	VersionHex    string        `json:"versionHex"`
-	MerkleRoot    string        `json:"merkleroot"`
-	Tx            []string      `json:"tx,omitempty"`
-	RawTx         []TxRawResult `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
-	Time          int64         `json:"time"`
-	Nonce         uint32        `json:"nonce"`
-	Bits          string        `json:"bits"`
-	Difficulty    float64       `json:"difficulty"`
-	PreviousHash  string        `json:"previousblockhash"`
-	NextHash      string        `json:"nextblockhash,omitempty"`
-	NTx           int           `json:"nTx"`
-	ChainWork     string        `json:"chainwork"`
+	Hash          string            `json:"hash"`
+	Confirmations int64             `json:"confirmations"`
+	StrippedSize  int32             `json:"strippedsize"`
+	Size          int32             `json:"size"`
+	Weight        int32             `json:"weight"`
+	Height        int64             `json:"height"`
+	Version       int32             `json:"version"`
+	VersionHex    string            `json:"versionHex"`
+	MerkleRoot    string            `json:"merkleroot"`
+	Tx            []string          `json:"tx,omitempty"`
+	RawTx         []TxRawResult     `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
+	Time          int64             `json:"time"`
+	Nonce         uint32            `json:"nonce"`
+	Bits          string            `json:"bits"`
+	Difficulty    float64           `json:"difficulty"`
+	PreviousHash  string            `json:"previousblockhash"`
+	NextHash      string            `json:"nextblockhash,omitempty"`
+	NTx           int               `json:"nTx"`
+    ChainWork     string            `json:"chainwork"`
+    AuxPow        *AuxPowResult     `json:"auxpow,omitempty"`
+}
+
+// AuxPowResult models the auxpow payload in a structured, Namecoin-like form.
+type AuxPowResult struct {
+    Tx                AuxPowTxResult `json:"tx"`
+    Index             uint32         `json:"index"`
+    ChainIndex        uint32         `json:"chainindex"`
+    MerkleBranch      []string       `json:"merklebranch"`
+    ChainMerkleBranch []string       `json:"chainmerklebranch"`
+    ParentBlock       string         `json:"parentblock"`
+}
+
+type AuxPowTxResult struct {
+    Hex      string       `json:"hex"`
+    Txid     string       `json:"txid"`
+    Version  int32        `json:"version"`
+    Vin      []AuxPowVin  `json:"vin"`
+    Vout     []AuxPowVout `json:"vout"`
+    LockTime uint32       `json:"locktime"`
+}
+
+type AuxPowVin struct {
+    Coinbase string `json:"coinbase,omitempty"`
+}
+
+type AuxPowVout struct {
+    Value        int64  `json:"value"`
+    ScriptPubKey string `json:"scriptPubKey"`
 }
 
 // GetBlockVerboseTxResult models the data from the getblock command when the

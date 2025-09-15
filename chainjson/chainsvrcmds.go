@@ -1111,6 +1111,54 @@ func NewGetTxSpendingPrevOutCmd(
 	}
 }
 
+// CreateAuxBlockCmd defines the createauxblock JSON-RPC command.
+// Some chains allow passing a payout address (optional).
+type CreateAuxBlockCmd struct {
+	// Optional: payout address to direct the block reward.
+	Address string `jsonrpcdefault:""`
+}
+
+// NewCreateAuxBlockCmd returns a new instance to issue a createauxblock RPC.
+func NewCreateAuxBlockCmd(address string) *CreateAuxBlockCmd {
+	return &CreateAuxBlockCmd{
+		Address: address,
+	}
+}
+
+// SubmitAuxBlockCmd defines the submitauxblock JSON-RPC command.
+type SubmitAuxBlockCmd struct {
+	Hash   string // candidate hash previously returned by createauxblock
+	AuxPow string // serialized AuxPoW in hex
+}
+
+// NewSubmitAuxBlockCmd returns a new instance to issue a submitauxblock RPC.
+func NewSubmitAuxBlockCmd(hash string, auxPow string) *SubmitAuxBlockCmd {
+	return &SubmitAuxBlockCmd{
+		Hash:   hash,
+		AuxPow: auxPow,
+	}
+}
+
+// CreateAuxBlockResult models the result of the createauxblock RPC.
+// Follows the Namecoin/Dogecoin AuxPoW spec.
+type CreateAuxBlockResult struct {
+	Hash              string `json:"hash"`
+	ChainID           int    `json:"chainid"`
+	PreviousBlockHash string `json:"previousblockhash"`
+	CoinbaseValue     int64  `json:"coinbasevalue"`
+	Bits              string `json:"bits"`
+	Height            int32  `json:"height"`
+	Target            string `json:"target"`
+	// Some forks use "_target" instead of "target" for compatibility.
+	// TargetCompat string `json:"_target,omitempty"`
+
+	// Optional anti-replay token.
+	// Cookie string `json:"cookie,omitempty"`
+}
+
+// SubmitAuxBlockResult is simply a boolean: true if accepted, false otherwise.
+type SubmitAuxBlockResult bool
+
 func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
@@ -1130,7 +1178,11 @@ func init() {
 	MustRegisterCmd("getblockhash", (*GetBlockHashCmd)(nil), flags)
 	MustRegisterCmd("getblockheader", (*GetBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("getblockstats", (*GetBlockStatsCmd)(nil), flags)
+
 	MustRegisterCmd("getblocktemplate", (*GetBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("createauxblock", (*CreateAuxBlockCmd)(nil), flags)
+	MustRegisterCmd("submitauxblock", (*SubmitAuxBlockCmd)(nil), flags)
+
 	MustRegisterCmd("getcfilter", (*GetCFilterCmd)(nil), flags)
 	MustRegisterCmd("getcfilterheader", (*GetCFilterHeaderCmd)(nil), flags)
 	MustRegisterCmd("getchaintips", (*GetChainTipsCmd)(nil), flags)

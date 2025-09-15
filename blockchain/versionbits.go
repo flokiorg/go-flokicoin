@@ -6,6 +6,8 @@
 package blockchain
 
 import (
+	"sync"
+
 	"github.com/flokiorg/go-flokicoin/chaincfg"
 )
 
@@ -261,6 +263,8 @@ func (c deploymentChecker) Condition(node *blockNode) (bool, error) {
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) calcNextBlockVersion(prevNode *blockNode) (int32, error) {
+	// One-time guard: ensure no deployment uses bit 8 (AuxPoW flag).
+	ensureNoAuxpowBit(b.chainParams)
 	// Set the appropriate bits for each actively defined rule deployment
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
@@ -278,6 +282,18 @@ func (b *BlockChain) calcNextBlockVersion(prevNode *blockNode) (int32, error) {
 		}
 	}
 	return int32(expectedVersion), nil
+}
+
+var checkAuxpowOnce sync.Once
+
+func ensureNoAuxpowBit(params *chaincfg.Params) {
+	checkAuxpowOnce.Do(func() {
+		for i := 0; i < len(params.Deployments); i++ {
+			if params.Deployments[i].BitNumber == 8 {
+				panic("Deployment with BitNumber 8 (AuxPoW bit) is not allowed")
+			}
+		}
+	})
 }
 
 // CalcNextBlockVersion calculates the expected version of the block after the

@@ -155,10 +155,17 @@ func (b *Block) Transactions() []*Tx {
 		b.transactions = make([]*Tx, len(b.msgBlock.Transactions))
 	}
 
-	// Offset of each tx.  80 accounts for the block header size.
-	offset := 80 + wire.VarIntSerializeSize(
-		uint64(len(b.msgBlock.Transactions)),
-	)
+    // Offset of each tx. Account for header size (80 bytes for base header,
+    // plus AuxPoW payload when present) and the varint tx count.
+    headerSize := wire.BlockHeaderLen
+    if b.msgBlock.Header.AuxPow() {
+        var hb bytes.Buffer
+        // Serialize header to determine exact length including AuxPoW payload.
+        // Ignore error as buffer writes cannot fail here.
+        _ = b.msgBlock.Header.Serialize(&hb)
+        headerSize = hb.Len()
+    }
+    offset := headerSize + wire.VarIntSerializeSize(uint64(len(b.msgBlock.Transactions)))
 
 	// Generate and cache the wrapped transactions for all that haven't
 	// already been done.
