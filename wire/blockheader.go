@@ -7,6 +7,7 @@ package wire
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"time"
 
@@ -19,11 +20,12 @@ import (
 const (
 	MaxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
 
-	VersionAuxPow     int32 = (1 << 8)
-	VersionChainStart int32 = (1 << 16)
+	VersionAuxPow int32 = (1 << 8)
 
 	// blockHeaderLen is a constant that represents the number of bytes for a block header.
 	BlockHeaderLen = 80
+	// ChainIDMask covers bits [16..21] (6 bits) used to store the chain ID.
+	ChainIDMask int32 = 0x003F0000
 )
 
 // BlockHeader defines information about a block and is used in the flokicoin
@@ -57,7 +59,7 @@ func (h *BlockHeader) AuxPow() bool {
 }
 
 func (h *BlockHeader) GetChainID() int32 {
-	return h.Version >> 16
+	return (h.Version & ChainIDMask) >> 16
 }
 
 func (h *BlockHeader) SetAuxPow(auxpow bool) {
@@ -69,8 +71,9 @@ func (h *BlockHeader) SetAuxPow(auxpow bool) {
 }
 
 func (h *BlockHeader) SetChainID(chainID int32) {
-	h.Version %= VersionChainStart
-	h.Version |= chainID * VersionChainStart
+	// Preserve all bits except the chain-id field, then set masked chain-id.
+	h.Version &= ^ChainIDMask
+	h.Version |= (chainID << 16) & ChainIDMask
 }
 
 func (h *BlockHeader) IsLegacy() bool {
@@ -101,6 +104,9 @@ func (h *BlockHeader) FlcDecode(r io.Reader, pver uint32, enc MessageEncoding) e
 	}
 
 	if h.AuxPow() {
+		if h.AuxPowHeader == nil {
+			h.AuxPowHeader = &AuxPowHeader{}
+		}
 		if err := h.AuxPowHeader.FlcDecode(r, pver, enc); err != nil {
 			return err
 		}
@@ -119,6 +125,9 @@ func (h *BlockHeader) FlcEncode(w io.Writer, pver uint32, enc MessageEncoding) e
 	}
 
 	if h.AuxPow() {
+		if h.AuxPowHeader == nil {
+			return fmt.Errorf("auxpow header is nil for auxpow block header: hash: %s (version: %x)", h.BlockHash(), h.Version)
+		}
 		if err := h.AuxPowHeader.FlcEncode(w, pver, enc); err != nil {
 			return err
 		}
@@ -139,6 +148,9 @@ func (h *BlockHeader) Deserialize(r io.Reader) error {
 	}
 
 	if h.AuxPow() {
+		if h.AuxPowHeader == nil {
+			h.AuxPowHeader = &AuxPowHeader{}
+		}
 		if err := h.AuxPowHeader.Deserialize(r); err != nil {
 			return err
 		}
@@ -174,12 +186,29 @@ func (h *BlockHeader) Serialize(w io.Writer) error {
 	}
 
 	if h.AuxPow() {
+		if h.AuxPowHeader == nil {
+			return fmt.Errorf("auxpow header is nil for auxpow block header: hash2: %s (version: %x)", h.BlockHash(), h.Version)
+		}
 		if err := h.AuxPowHeader.Serialize(w); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// SerializeHeader encodes only the 80-byte base block header fields to w
+// (Version, PrevBlock, MerkleRoot, Timestamp, Bits, Nonce) and does not
+// include any AuxPoW payload regardless of the AuxPoW version bit.
+func (h *BlockHeader) SerializeHeader(w io.Writer) error {
+    return writeBlockHeader(w, 0, h)
+}
+
+// DeserializeHeader decodes only the 80-byte base block header fields from r
+// into the receiver (Version, PrevBlock, MerkleRoot, Timestamp, Bits, Nonce)
+// and ignores any AuxPoW payload regardless of the AuxPoW version bit.
+func (h *BlockHeader) DeserializeHeader(r io.Reader) error {
+    return readBlockHeader(r, 0, h)
 }
 
 // NewBlockHeader returns a new BlockHeader using the provided version, previous
