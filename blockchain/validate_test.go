@@ -7,6 +7,7 @@ package blockchain
 
 import (
 	"math"
+	"math/big"
 	"reflect"
 	"testing"
 	"time"
@@ -90,7 +91,7 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 
 	var blocks []*chainutil.Block
 	for _, file := range testFiles {
-		blockTmp, err := loadBlocks(file)
+		blockTmp, err := loadBlocks(file, &chaincfg.MainNetParams)
 		if err != nil {
 			t.Fatalf("Error loading file: %v\n", err)
 		}
@@ -148,6 +149,93 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 		t.Fatal("CheckConnectBlockTemplate: Did not received expected error " +
 			"on block 4 with invalid difficulty bits")
 	}
+}
+
+// TestValidateDifficultyBlocks processes blocks from a difficulty-focused
+// dataset and validates them by processing only blocks. All blocks must be
+// accepted; any invalid block causes the test to fail.
+func TestValidateDifficultyBlocks(t *testing.T) {
+	dataFile := "blk_diff.dat.bz2"
+
+	params := &chaincfg.TestNet3Params
+
+	// Load blocks for the chosen params.
+	blocks, err := loadBlocks(dataFile, params)
+	if err != nil {
+		t.Fatalf("error loading block file: %v", err)
+	}
+	if len(blocks) == 0 {
+		t.Fatalf("no blocks loaded")
+	}
+
+	// Setup a chain instance that matches the params.
+	chain, teardownFunc, err := chainSetup(
+		"validate_difficulty_blocks",
+		params,
+	)
+	if err != nil {
+		t.Errorf("failed to setup chain instance: %v", err)
+		return
+	}
+	defer teardownFunc()
+
+	// Reduce coinbase maturity for test speed (not relevant to diff checks).
+	chain.TstSetCoinbaseMaturity(1)
+
+	// Process each block; any validation error or orphan indicates failure.
+	for i := 1; i < len(blocks); i++ {
+		_, isOrphan, err := chain.ProcessBlock(blocks[i], BFNone)
+		if err != nil {
+			t.Fatalf("unexpected error processing block %d: %v", i, err)
+		}
+		if isOrphan {
+			t.Fatalf("block %d became orphan (invalid linkage)", i)
+		}
+	}
+
+    // Display stats starting at block index 200 (not a 200-block window):
+    // mean spacing (s) and mean difficulty relative to PowLimit.
+    n := len(blocks)
+    if n > 200 {
+        start := 200
+
+        powLimit := params.PowLimit
+        var sumDiff float64
+        diffCount := 0
+        var sumDt int64
+        intervals := 0
+
+        for i := start; i < n; i++ {
+            bits := blocks[i].MsgBlock().Header.Bits
+            target := CompactToBig(bits)
+            if target.Sign() > 0 {
+                f := new(big.Float).Quo(new(big.Float).SetInt(powLimit), new(big.Float).SetInt(target))
+                d64, _ := f.Float64()
+                sumDiff += d64
+                diffCount++
+            }
+
+            if i > start {
+                prev := blocks[i-1].MsgBlock().Header.Timestamp.Unix()
+                cur := blocks[i].MsgBlock().Header.Timestamp.Unix()
+                dt := cur - prev
+                if dt > 0 {
+                    sumDt += dt
+                    intervals++
+                }
+            }
+        }
+
+        meanSpacing := 0.0
+        if intervals > 0 {
+            meanSpacing = float64(sumDt) / float64(intervals)
+        }
+        meanDiff := 0.0
+        if diffCount > 0 {
+            meanDiff = sumDiff / float64(diffCount)
+        }
+        t.Logf("stats from block %d to %d: mean spacing %.2fs, mean diff %.6f", start, n-1, meanSpacing, meanDiff)
+    }
 }
 
 // TestCheckBlockSanity tests the CheckBlockSanity function to ensure it works
