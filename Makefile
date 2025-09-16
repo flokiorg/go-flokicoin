@@ -198,20 +198,9 @@ debugtest:
 test:
 	go test -v -count=1 $(dir) -run $(run)
 
-testexportchain:
-	go run ./cmd/testexport -a bulk -v \
-		-d /root/.flokicoind/data/main/blocks_ffldb \
+testexport:
+	go run ./cmd/testexport -v \
+		-d ./_test/network/blocks_ffldb \
 		-o ./blockchain/testdata \
 		-f $(file).dat.bz2 \
 		-r 0-10000
-
-
-testexportdiff:
-	go run ./cmd/testexport -a gentests -v \
-		-d /root/.flokicoind/data/main/blocks_ffldb \
-		-o ./blockchain/testdata \
-		-f diff_chain.json \
-		-r 0-1000 \
-		--activation-height 11 \
-		--first-powlimit 5 \
-		--normalize-ts
