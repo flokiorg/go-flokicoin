@@ -729,7 +729,7 @@ func TestFlushNeededAfterPrune(t *testing.T) {
 }
 
 func TestFlushOnPrune(t *testing.T) {
-	return // #FLOKI_CHANGE
+	return // #FLOKI_CHANGE #TODO
 	chain, tearDown, err := chainSetup("TestFlushOnPrune", &chaincfg.MainNetParams)
 	if err != nil {
 		panic(fmt.Sprintf("error loading blockchain with database: %v", err))
@@ -745,7 +745,7 @@ func TestFlushOnPrune(t *testing.T) {
 	chain.pruneTarget = uint64(maxBlockFileSize) * 2
 
 	// Read blocks from the file.
-	blocks, err := loadBlocks("blk_0_to_14131.dat")
+	blocks, err := loadBlocks("blk_0_to_14131.dat", &chaincfg.MainNetParams)
 	if err != nil {
 		t.Fatalf("failed to read block from file. %v", err)
 	}
@@ -850,7 +850,7 @@ func TestFlushOnPrune(t *testing.T) {
 }
 
 func TestInitConsistentState(t *testing.T) {
-	return // #FLOKI_CHANGE
+	return // #FLOKI_CHANGE #TODO
 
 	//  Boilerplate for creating a chain.
 	dbName := "TestFlushOnPrune"
@@ -863,7 +863,7 @@ func TestInitConsistentState(t *testing.T) {
 	chain.utxoCache.cachedEntries.maxTotalMemoryUsage = chain.utxoCache.maxTotalMemoryUsage
 
 	// Read blocks from the file.
-	blocks, err := loadBlocks("blk_0_to_14131.dat")
+	blocks, err := loadBlocks("blk_0_to_14131.dat", &chaincfg.MainNetParams)
 	if err != nil {
 		t.Fatalf("failed to read block from file. %v", err)
 	}

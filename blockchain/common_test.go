@@ -59,62 +59,67 @@ func isSupportedDbType(dbType string) bool {
 	return false
 }
 
-// loadBlocks reads files containing flokicoin block data (gzipped but otherwise
-// in the format flokicoind writes) from disk and returns them as an array of
-// chainutil.Block.
-func loadBlocks(filename string) (blocks []*chainutil.Block, err error) {
-	filename = filepath.Join("testdata/", filename)
+// loadBlocks reads a flokicoind block file and returns all contained blocks.
+// The network is enforced via the provided params.
+func loadBlocks(filename string, params *chaincfg.Params) (blocks []*chainutil.Block, err error) {
+    filename = filepath.Join("testdata/", filename)
 
-	var network = wire.MainNet
-	var dr io.Reader
-	var fi io.ReadCloser
+    // Open the file and select reader based on extension.
+    fi, err := os.Open(filename)
+    if err != nil {
+        return nil, err
+    }
+    defer fi.Close()
 
-	fi, err = os.Open(filename)
-	if err != nil {
-		return
-	}
+    var dr io.Reader
+    if strings.HasSuffix(filename, ".bz2") {
+        dr = bzip2.NewReader(fi)
+    } else {
+        dr = fi
+    }
 
-	if strings.HasSuffix(filename, ".bz2") {
-		dr = bzip2.NewReader(fi)
-	} else {
-		dr = fi
-	}
-	defer fi.Close()
+    expectedMagic := uint32(params.Net)
+    var seenAny bool
 
-	var block *chainutil.Block
+    for {
+        // Read network magic.
+        var magic uint32
+        if err = binary.Read(dr, binary.LittleEndian, &magic); err != nil {
+            if err == io.EOF {
+                if !seenAny {
+                    return nil, io.EOF
+                }
+                return blocks, nil
+            }
+            return nil, err
+        }
+        if magic != expectedMagic {
+            if !seenAny {
+                return nil, fmt.Errorf("unexpected network magic in block file")
+            }
+            // Stop on network change after having read at least one block.
+            return blocks, nil
+        }
 
-	err = nil
-	for height := int64(1); err == nil; height++ {
-		var rintbuf uint32
-		err = binary.Read(dr, binary.LittleEndian, &rintbuf)
-		if err == io.EOF {
-			// hit end of file at expected offset: no warning
-			height--
-			err = nil
-			break
-		}
-		if err != nil {
-			break
-		}
-		if rintbuf != uint32(network) {
-			break
-		}
-		err = binary.Read(dr, binary.LittleEndian, &rintbuf)
-		blocklen := rintbuf
+        // Read block length.
+        var blockLen uint32
+        if err = binary.Read(dr, binary.LittleEndian, &blockLen); err != nil {
+            return nil, err
+        }
 
-		rbytes := make([]byte, blocklen)
+        // Read the full block payload.
+        rbytes := make([]byte, blockLen)
+        if _, err = io.ReadFull(dr, rbytes); err != nil {
+            return nil, err
+        }
 
-		// read block
-		dr.Read(rbytes)
-
-		block, err = chainutil.NewBlockFromBytes(rbytes)
-		if err != nil {
-			return
-		}
-		blocks = append(blocks, block)
-	}
-
-	return
+        block, err := chainutil.NewBlockFromBytes(rbytes)
+        if err != nil {
+            return nil, err
+        }
+        blocks = append(blocks, block)
+        seenAny = true
+    }
 }
 
 // chainSetup is used to create a new db and chain instance with the genesis
