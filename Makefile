@@ -185,6 +185,22 @@ test-image:
 # =========
 # temp
 # =========
-	 
+
+dir ?= .
+run ?= .
+
 debug:
-	dlv debug .  --headless --listen=:2345  --api-version=2
+	dlv debug $(dir)  --headless --listen=:2345  --api-version=2 --  $(run)
+
+debugtest:
+	dlv test $(dir)  --headless --listen=:2345  --api-version=2 -- -test.run $(run)
+
+test:
+	go test -v -count=1 $(dir) -run $(run)
+
+testexport:
+	go run ./cmd/testexport -v \
+		-d ./_test/network/blocks_ffldb \
+		-o ./blockchain/testdata \
+		-f $(file).dat.bz2 \
+		-r 0-10000

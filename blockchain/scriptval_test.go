@@ -6,10 +6,11 @@
 package blockchain
 
 import (
-	"fmt"
-	"testing"
+    "fmt"
+    "testing"
 
-	"github.com/flokiorg/go-flokicoin/txscript"
+    "github.com/flokiorg/go-flokicoin/chaincfg"
+    "github.com/flokiorg/go-flokicoin/txscript"
 )
 
 // TestCheckBlockScripts ensures that validating the all of the scripts in a
@@ -17,7 +18,7 @@ import (
 func TestCheckBlockScripts(t *testing.T) {
 	testBlockNum := 277647
 	blockDataFile := fmt.Sprintf("%d.dat.bz2", testBlockNum)
-	blocks, err := loadBlocks(blockDataFile)
+    blocks, err := loadBlocks(blockDataFile, &chaincfg.MainNetParams)
 	if err != nil {
 		t.Errorf("Error loading file: %v\n", err)
 		return

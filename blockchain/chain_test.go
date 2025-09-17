@@ -21,7 +21,7 @@ import (
 
 // TestHaveBlock tests the HaveBlock API to ensure proper functionality.
 func TestHaveBlock(t *testing.T) {
-	return // #FLOKI_CHANGE
+	return // #FLOKI_CHANGE  #TODO
 
 	// Load up blocks such that there is a side chain.
 	// (genesis block) -> 1 -> 2 -> 3 -> 4
@@ -33,7 +33,7 @@ func TestHaveBlock(t *testing.T) {
 
 	var blocks []*chainutil.Block
 	for _, file := range testFiles {
-		blockTmp, err := loadBlocks(file)
+		blockTmp, err := loadBlocks(file, &chaincfg.MainNetParams)
 		if err != nil {
 			t.Errorf("Error loading file: %v\n", err)
 			return

@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-// XXX pedro: we will probably need to bump this.
 const (
 	// ProtocolVersion is the latest protocol version this package supports.
 	ProtocolVersion uint32 = 70016

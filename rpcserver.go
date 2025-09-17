@@ -76,8 +76,9 @@ const (
 	// in the memory pool.
 	gbtRegenerateSeconds = 60
 
-	// maxProtocolVersion is the max protocol version the server supports.
-	maxProtocolVersion = 70002
+    // maxProtocolVersion is the max protocol version the server supports.
+    // Align with the latest supported by the wire package.
+    maxProtocolVersion = wire.ProtocolVersion
 
 	// defaultMaxFeeRate is the default value to use(0.1 FLC/kvB) when the
 	// `MaxFee` field is not set when calling `testmempoolaccept`.
@@ -146,16 +147,20 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"estimatefee":      handleEstimateFee,
 	"estimatesmartfee": handleEstimateSmartFee,
 
-	"generate":           handleGenerate,
-	"getaddednodeinfo":   handleGetAddedNodeInfo,
-	"getbestblock":       handleGetBestBlock,
-	"getbestblockhash":   handleGetBestBlockHash,
-	"getblock":           handleGetBlock,
-	"getblockchaininfo":  handleGetBlockChainInfo,
-	"getblockcount":      handleGetBlockCount,
-	"getblockhash":       handleGetBlockHash,
-	"getblockheader":     handleGetBlockHeader,
-	"getblocktemplate":   handleGetBlockTemplate,
+	"generate":          handleGenerate,
+	"getaddednodeinfo":  handleGetAddedNodeInfo,
+	"getbestblock":      handleGetBestBlock,
+	"getbestblockhash":  handleGetBestBlockHash,
+	"getblock":          handleGetBlock,
+	"getblockchaininfo": handleGetBlockChainInfo,
+	"getblockcount":     handleGetBlockCount,
+	"getblockhash":      handleGetBlockHash,
+	"getblockheader":    handleGetBlockHeader,
+
+	"getblocktemplate": handleGetBlockTemplate,
+	"createauxblock":   handleCreateAuxBlock,
+	"submitauxblock":   handleSubmitAuxBlock,
+
 	"getchaintips":       handleGetChainTips,
 	"getcfilter":         handleGetCFilter,
 	"getcfilterheader":   handleGetCFilterHeader,
@@ -1200,6 +1205,60 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		ChainWork:     fmt.Sprintf("%064x", chainWork),
 	}
 
+	// Populate AuxPow as structured object if present.
+	if blockHeader.AuxPowHeader != nil {
+		aph := blockHeader.AuxPowHeader
+
+		// tx hex and txid
+		var txBuf bytes.Buffer
+		_ = aph.CoinbaseTx.Serialize(&txBuf)
+		txHex := hex.EncodeToString(txBuf.Bytes())
+		txid := aph.CoinbaseTx.TxHash().String()
+
+		// vin: coinbase script
+		vin := []chainjson.AuxPowVin{{Coinbase: hex.EncodeToString(aph.CoinbaseTx.TxIn[0].SignatureScript)}}
+
+		// vout: value + scriptPubKey hex
+		vout := make([]chainjson.AuxPowVout, len(aph.CoinbaseTx.TxOut))
+		for i, o := range aph.CoinbaseTx.TxOut {
+			vout[i] = chainjson.AuxPowVout{
+				Value:        o.Value,
+				ScriptPubKey: hex.EncodeToString(o.PkScript),
+			}
+		}
+
+		// branches
+		merkleBranch := make([]string, len(aph.CoinbaseBranch.Hashes))
+		for i := range aph.CoinbaseBranch.Hashes {
+			merkleBranch[i] = aph.CoinbaseBranch.Hashes[i].String()
+		}
+		chainMerkleBranch := make([]string, len(aph.BlockChainBranch.Hashes))
+		for i := range aph.BlockChainBranch.Hashes {
+			chainMerkleBranch[i] = aph.BlockChainBranch.Hashes[i].String()
+		}
+
+		// parent block header hex
+		var ph bytes.Buffer
+		_ = aph.ParentBlockHeader.Serialize(&ph)
+		parentHex := hex.EncodeToString(ph.Bytes())
+
+		blockReply.AuxPow = &chainjson.AuxPowResult{
+			Tx: chainjson.AuxPowTxResult{
+				Hex:      txHex,
+				Txid:     txid,
+				Version:  aph.CoinbaseTx.Version,
+				Vin:      vin,
+				Vout:     vout,
+				LockTime: aph.CoinbaseTx.LockTime,
+			},
+			Index:             aph.CoinbaseBranch.SideMask,
+			ChainIndex:        aph.BlockChainBranch.SideMask,
+			MerkleBranch:      merkleBranch,
+			ChainMerkleBranch: chainMerkleBranch,
+			ParentBlock:       parentHex,
+		}
+	}
+
 	if *c.Verbosity == 1 {
 		transactions := blk.Transactions()
 		txNames := make([]string, len(transactions))
@@ -1440,7 +1499,7 @@ func handleGetBlockHeader(s *rpcServer, cmd interface{}, closeChan <-chan struct
 	// header as a hex-encoded string.
 	if c.Verbose != nil && !*c.Verbose {
 		var headerBuf bytes.Buffer
-		err := blockHeader.Serialize(&headerBuf)
+		err := blockHeader.SerializeHeader(&headerBuf)
 		if err != nil {
 			context := "Failed to serialize block header"
 			return nil, internalRPCError(err.Error(), context)
@@ -2428,54 +2487,95 @@ func handleGetHeaders(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 // handleGetInfo implements the getinfo command. We only return the fields
 // that are not related to wallet functionality.
 func handleGetInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	best := s.cfg.Chain.BestSnapshot()
-	ret := &chainjson.InfoChainResult{
-		Version:         int32(1000000*appMajor + 10000*appMinor + 100*appPatch),
-		Subversion:      "/flokicoind:1.0.5/",
-		ProtocolVersion: int32(maxProtocolVersion),
-		Blocks:          best.Height,
-		TimeOffset:      int64(s.cfg.TimeSource.Offset().Seconds()),
-		Connections:     s.cfg.ConnMgr.ConnectedCount(),
-		Proxy:           cfg.Proxy,
-		Difficulty:      getDifficultyRatio(best.Bits, s.cfg.ChainParams),
-		TestNet:         cfg.TestNet3,
-		RelayFee:        cfg.minRelayTxFee.ToFLC(),
+    best := s.cfg.Chain.BestSnapshot()
+    subVersion := fmt.Sprintf("flokicoind:%d.%d.%d-%s", appMajor, appMinor, appPatch, appPreRelease)
+    if appBuild != "" {
+        subVersion = fmt.Sprintf("%s+%s", subVersion, appBuild)
+    }
+    // Derive local service flags similar to server initialization.
+    services := defaultServices
+    if cfg.NoPeerBloomFilters {
+        services &^= wire.SFNodeBloom
+    }
+    if cfg.NoCFilters {
+        services &^= wire.SFNodeCF
+    }
+    if cfg.Prune != 0 {
+        services &^= wire.SFNodeNetwork
+    }
 
-		// New Fields
-		LocalServices: "0000000000000c08", // Example default value
-		LocalServicesNames: []string{
-			"WITNESS",
-			"NETWORK_LIMITED",
-			"P2P_V2",
-		},
-		LocalRelay:     true, // Default to true
-		NetworkActive:  true, // Default to active
-		ConnectionsIn:  0,    // Default inbound connections
-		ConnectionsOut: 0,    // Default outbound connections
-		Networks: []chainjson.NetworksResult{ // Default network info
-			{
-				Name:                      "ipv4",
-				Limited:                   false,
-				Reachable:                 true,
-				Proxy:                     "",
-				ProxyRandomizeCredentials: false,
-			},
-			{
-				Name:                      "ipv6",
-				Limited:                   false,
-				Reachable:                 true,
-				Proxy:                     "",
-				ProxyRandomizeCredentials: false,
-			},
-		},
-		IncrementalFee: 0.00001000,
-		LocalAddresses: []string{},
-		Warnings: []string{
-			"This is a pre-release test build - use at your own risk - do not use for mining or merchant applications",
-		},
-	}
+    // Build LocalServices names list from the pretty-printed string.
+    // wire.ServiceFlag.String returns names separated by '|'.
+    svcStr := services.String()
+    svcNames := []string{}
+    if svcStr != "0x0" && svcStr != "" {
+        for _, part := range strings.Split(svcStr, "|") {
+            if part != "" {
+                svcNames = append(svcNames, part)
+            }
+        }
+    }
 
-	return ret, nil
+    // Count inbound/outbound connections.
+    var inCount, outCount int32
+    for _, p := range s.cfg.ConnMgr.ConnectedPeers() {
+        if p.ToPeer().Inbound() {
+            inCount++
+        } else {
+            outCount++
+        }
+    }
+
+    // Collect known local addresses.
+    localAddrs := []string{}
+    for _, na := range s.cfg.ConnMgr.NodeAddresses() {
+        host := na.Addr.String()
+        port := strconv.Itoa(int(na.Port))
+        localAddrs = append(localAddrs, net.JoinHostPort(host, port))
+    }
+
+    ret := &chainjson.InfoChainResult{
+        Version:         int32(1000000*appMajor + 10000*appMinor + 100*appPatch),
+        Subversion:      fmt.Sprintf("/%s/", subVersion),
+        ProtocolVersion: int32(maxProtocolVersion),
+        Blocks:          best.Height,
+        TimeOffset:      int64(s.cfg.TimeSource.Offset().Seconds()),
+        Connections:     s.cfg.ConnMgr.ConnectedCount(),
+        Proxy:           cfg.Proxy,
+        Difficulty:      getDifficultyRatio(best.Bits, s.cfg.ChainParams),
+        TestNet:         s.cfg.ChainParams.Net != wire.MainNet,
+        RelayFee:        cfg.minRelayTxFee.ToFLC(),
+
+        LocalServices:      svcStr,
+        LocalServicesNames: svcNames,
+        LocalRelay:         true,
+        NetworkActive:      true,
+        ConnectionsIn:      inCount,
+        ConnectionsOut:     outCount,
+        Networks: []chainjson.NetworksResult{
+            {
+                Name:                      "ipv4",
+                Limited:                   false,
+                Reachable:                 true,
+                Proxy:                     "",
+                ProxyRandomizeCredentials: false,
+            },
+            {
+                Name:                      "ipv6",
+                Limited:                   false,
+                Reachable:                 true,
+                Proxy:                     "",
+                ProxyRandomizeCredentials: false,
+            },
+        },
+        IncrementalFee: 0.00001000,
+        LocalAddresses: localAddrs,
+        Warnings: []string{
+            "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications",
+        },
+    }
+
+    return ret, nil
 }
 
 // handleGetInfo implements the getinfo command. We only return the fields
@@ -5278,6 +5378,13 @@ type rpcserverConfig struct {
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
 	FeeEstimator *mempool.FeeEstimator
+
+	// auxCache holds recently generated AuxPoW block candidates created via
+	// createauxblock.  It maps candidate hashes to the underlying block
+	// templates so that submitauxblock can later verify and finalize them.
+	// Entries are automatically expired after a short TTL or invalidated
+	// when the chain tip changes to prevent stale submissions.
+	AuxCache *AuxCache
 }
 
 // newRPCServer returns a new instance of the rpcServer struct.
@@ -5303,6 +5410,8 @@ func newRPCServer(config *rpcserverConfig) (*rpcServer, error) {
 	rpc.ntfnMgr = newWsNotificationManager(&rpc)
 	rpc.cfg.Chain.Subscribe(rpc.handleBlockchainNotification)
 
+	rpc.cfg.AuxCache = newAuxCache(2 * time.Minute)
+
 	return &rpc, nil
 }
 
@@ -5322,6 +5431,12 @@ func (s *rpcServer) handleBlockchainNotification(notification *blockchain.Notifi
 		// their old block template to become stale.
 		s.gbtWorkState.NotifyBlockConnected(block.Hash())
 
+		// AuxPoW: invalidate candidates that don't match the new tip's prev.
+		if s.cfg.AuxCache != nil {
+			prev := block.MsgBlock().Header.PrevBlock
+			s.cfg.AuxCache.invalidateOnTipChange(prev)
+		}
+
 	case blockchain.NTBlockConnected:
 		block, ok := notification.Data.(*chainutil.Block)
 		if !ok {
@@ -5332,6 +5447,12 @@ func (s *rpcServer) handleBlockchainNotification(notification *blockchain.Notifi
 		// Notify registered websocket clients of incoming block.
 		s.ntfnMgr.NotifyBlockConnected(block)
 
+		// AuxPoW: same invalidation on connect (covers different notify orders).
+		if s.cfg.AuxCache != nil {
+			prev := block.MsgBlock().Header.PrevBlock
+			s.cfg.AuxCache.invalidateOnTipChange(prev)
+		}
+
 	case blockchain.NTBlockDisconnected:
 		block, ok := notification.Data.(*chainutil.Block)
 		if !ok {
@@ -5341,7 +5462,263 @@ func (s *rpcServer) handleBlockchainNotification(notification *blockchain.Notifi
 
 		// Notify registered websocket clients.
 		s.ntfnMgr.NotifyBlockDisconnected(block)
+
+		// AuxPoW: safest is to clear cache on disconnect (reorg); alternatively,
+		// rebuild using the new best's prev if you track it here.
+		if s.cfg.AuxCache != nil {
+			s.cfg.AuxCache.clear()
+		}
 	}
+}
+
+type AuxCandidate struct {
+	Hash   chainhash.Hash
+	Height int32
+	// Store the block so we can derive fields (prev hash, bits, coinbase value) directly.
+	Block  *wire.MsgBlock
+	Expiry time.Time
+}
+
+type AuxCache struct {
+	sync.Mutex
+	byHash map[chainhash.Hash]*AuxCandidate
+	ttl    time.Duration
+}
+
+func newAuxCache(ttl time.Duration) *AuxCache {
+	return &AuxCache{byHash: make(map[chainhash.Hash]*AuxCandidate), ttl: ttl}
+}
+
+// put stores c and eagerly purges any expired entries.
+func (ac *AuxCache) put(c *AuxCandidate) {
+	now := time.Now()
+
+	ac.Lock()
+	defer ac.Unlock()
+
+	// Clean-on-put: purge expired first.
+	for h, cand := range ac.byHash {
+		if now.After(cand.Expiry) {
+			delete(ac.byHash, h)
+		}
+	}
+
+	// Set/refresh expiry and insert.
+	c.Expiry = now.Add(ac.ttl)
+	ac.byHash[c.Hash] = c
+}
+
+// get returns a candidate if present and not expired. If the entry is expired,
+// it is removed and (nil,false) is returned.
+func (ac *AuxCache) get(h chainhash.Hash) (*AuxCandidate, bool) {
+	ac.Lock()
+	defer ac.Unlock()
+
+	c, ok := ac.byHash[h]
+	if !ok {
+		return nil, false
+	}
+	if time.Now().After(c.Expiry) {
+		delete(ac.byHash, h)
+		return nil, false
+	}
+	return c, true
+}
+
+// invalidateOnTipChange removes all candidates that were built on a different prev hash.
+// Call this right after a new best block is connected.
+func (ac *AuxCache) invalidateOnTipChange(newPrev chainhash.Hash) {
+	ac.Lock()
+	defer ac.Unlock()
+	for h, c := range ac.byHash {
+		if c.Block == nil || c.Block.Header.PrevBlock != newPrev {
+			delete(ac.byHash, h)
+		}
+	}
+}
+
+// (optional helpers)
+func (ac *AuxCache) evict(h chainhash.Hash) {
+	ac.Lock()
+	delete(ac.byHash, h)
+	ac.Unlock()
+}
+func (ac *AuxCache) clear() {
+	ac.Lock()
+	ac.byHash = make(map[chainhash.Hash]*AuxCandidate)
+	ac.Unlock()
+}
+
+func handleCreateAuxBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	best := s.cfg.Chain.BestSnapshot()
+
+	// AuxPoW network gating: require params + best snapshot and activation reached.
+	// Adjust the comparison to your param semantics if needed.
+	if s.cfg.ChainParams == nil || best == nil || best.Height < s.cfg.ChainParams.AuxpowHeightEffective {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxNotSupported,
+			Message: "createauxblock is not available on this network",
+		}
+	}
+
+	c := cmd.(*chainjson.CreateAuxBlockCmd)
+
+	// Parse and validate reward address.
+	payToAddr, err := chainutil.DecodeAddress(c.Address, s.cfg.ChainParams)
+	if err != nil {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCInvalidAddressOrKey,
+			Message: fmt.Sprintf("invalid address: %v", err),
+		}
+	}
+	if !payToAddr.IsForNet(s.cfg.ChainParams) {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCInvalidAddressOrKey,
+			Message: "address not valid for this network",
+		}
+	}
+
+	state := s.gbtWorkState
+	state.Lock()
+	defer state.Unlock()
+
+	const useCoinbaseValue = true
+	if err := state.updateBlockTemplate(s, useCoinbaseValue); err != nil {
+		return nil, err
+	}
+
+	template := state.template
+	block := template.Block
+
+	// Check time sanity
+	adjusted := state.timeSource.AdjustedTime()
+	maxTime := adjusted.Add(time.Second * blockchain.MaxTimeOffsetSeconds)
+	if block.Header.Timestamp.After(maxTime) {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCOutOfRange,
+			Message: fmt.Sprintf("template time %v exceeds max %v", adjusted, maxTime),
+		}
+	}
+
+	// Update the block coinbase output of the template.
+	pkScript, err := txscript.PayToAddrScript(payToAddr)
+	if err != nil {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxInternal,
+			Message: fmt.Sprintf("cannot create pkScript for address %v: %v", c.Address, err),
+		}
+	}
+
+	coinbaseTx := block.Transactions[0]
+	coinbaseTx.TxOut[0].PkScript = pkScript
+	template.ValidPayAddress = true
+
+	// Update the merkle root.
+
+	merkleRoot := blockchain.CalcMerkleRoot(chainutil.NewBlock(block).Transactions(), false)
+	block.Header.MerkleRoot = merkleRoot
+	block.Header.SetChainID(s.cfg.ChainParams.AuxpowChainId)
+	// Mark as AuxPoW candidate so downstream tools see the intent.
+	block.Header.SetAuxPow(true)
+
+	// Build Aux candidate with a copy of the block to avoid mutating the template later.
+	clone := new(wire.MsgBlock)
+	*clone = *block
+	cand := &AuxCandidate{
+		Hash:   block.BlockHash(),
+		Height: int32(template.Height),
+		Block:  clone,
+	}
+
+	s.cfg.AuxCache.put(cand)
+
+	res := &chainjson.CreateAuxBlockResult{
+		Hash:              cand.Hash.String(),
+		ChainID:           int(s.cfg.ChainParams.AuxpowChainId),
+		PreviousBlockHash: clone.Header.PrevBlock.String(),
+		CoinbaseValue:     coinbaseTx.TxOut[0].Value,
+		Bits:              fmt.Sprintf("%08x", clone.Header.Bits),
+		Height:            cand.Height,
+		Target:            fmt.Sprintf("%064x", blockchain.CompactToBig(clone.Header.Bits)),
+	}
+	return res, nil
+}
+
+func handleSubmitAuxBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	best := s.cfg.Chain.BestSnapshot()
+
+	// AuxPoW gating: require params + best snapshot and activation reached.
+	if s.cfg.ChainParams == nil || best == nil || best.Height < s.cfg.ChainParams.AuxpowHeightEffective {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxNotSupported,
+			Message: "submitauxblock is not available on this network",
+		}
+	}
+	if s.cfg.AuxCache == nil {
+		return chainjson.SubmitAuxBlockResult(false), nil
+	}
+
+	c := cmd.(*chainjson.SubmitAuxBlockCmd)
+
+	// Lookup cached candidate.
+	h, err := chainhash.NewHashFromStr(c.Hash)
+	if err != nil {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxUnknownHash,
+			Message: "invalid candidate hash",
+		}
+	}
+	cand, ok := s.cfg.AuxCache.get(*h)
+	if !ok {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxCandidateExpired,
+			Message: "unknown or expired aux candidate",
+		}
+	}
+
+	// Decode AuxPoW (wire.AuxPowHeader).
+	raw, err := hex.DecodeString(c.AuxPow)
+	if err != nil {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxInvalidAuxPow,
+			Message: "auxpow is not valid hex",
+		}
+	}
+	var aph wire.AuxPowHeader
+	if err := aph.Deserialize(bytes.NewReader(raw)); err != nil {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxInvalidAuxPow,
+			Message: "failed to parse auxpow: " + err.Error(),
+		}
+	}
+
+	// Finalize child block: attach AuxPoW and process.
+	// Use stored candidate block rather than a mining template.
+	msgBlock := new(wire.MsgBlock)
+	*msgBlock = *cand.Block
+	// Ensure your wire.MsgBlock has an AuxPow field of type *wire.AuxPowHeader.
+	msgBlock.Header.AuxPowHeader = &aph
+	// Ensure AuxPoW version bit is set now that AuxPoW data is attached.
+
+	block := chainutil.NewBlock(msgBlock)
+	block.SetHeight(cand.Height)
+
+	_, err = s.cfg.SyncMgr.SubmitBlock(block, blockchain.BFNone)
+	if err != nil {
+		// Already have the block — treat as success like other auxpow RPCs.
+		if rerr, ok := err.(blockchain.RuleError); ok && rerr.ErrorCode == blockchain.ErrDuplicateBlock {
+			rpcsLog.Infof("Already have block %s (duplicate) via submitauxblock", block.Hash())
+			return chainjson.SubmitAuxBlockResult(true), nil
+		}
+		rpcsLog.Warnf("Failed to accept aux block %s via submitauxblock: %v", block.Hash(), err)
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCAuxInternal,
+			Message: "failed to accept aux block: " + err.Error(),
+		}
+	}
+
+	rpcsLog.Infof("Accepted block %s via submitauxblock", block.Hash())
+	return chainjson.SubmitAuxBlockResult(true), nil
 }
 
 func init() {

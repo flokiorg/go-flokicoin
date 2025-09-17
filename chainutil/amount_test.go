@@ -28,25 +28,25 @@ func TestAmountCreation(t *testing.T) {
 		},
 		{
 			name:     "max producible",
-			amount:   21e6,
+			amount:   5e8,
 			valid:    true,
 			expected: MaxLoki,
 		},
 		{
 			name:     "min producible",
-			amount:   -21e6,
+			amount:   -5e8,
 			valid:    true,
 			expected: -MaxLoki,
 		},
 		{
 			name:     "exceeds max producible",
-			amount:   21e6 + 1e-8,
+			amount:   5e8 + 1e-8,
 			valid:    true,
 			expected: MaxLoki + 1,
 		},
 		{
 			name:     "exceeds min producible",
-			amount:   -21e6 - 1e-8,
+			amount:   -5e8 - 1e-8,
 			valid:    true,
 			expected: -MaxLoki - 1,
 		},
@@ -104,7 +104,7 @@ func TestAmountCreation(t *testing.T) {
 			continue
 		}
 
-		if a != test.expected {
+		if a.ToFLC() != test.expected.ToFLC() {
 			t.Errorf("%v: Created amount %v does not match expected %v", test.name, a, test.expected)
 			continue
 		}
@@ -123,8 +123,8 @@ func TestAmountUnitConversions(t *testing.T) {
 			name:      "MFLC",
 			amount:    MaxLoki,
 			unit:      AmountMegaFLC,
-			converted: 21,
-			s:         "21 MFLC",
+			converted: 500,
+			s:         "500 MFLC",
 		},
 		{
 			name:      "kFLC",

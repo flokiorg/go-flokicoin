@@ -486,6 +486,8 @@ func loadConfig() (*config, []string, error) {
 		os.Exit(0)
 	}
 
+	fmt.Println(artOrange + artBright + artText + "\nv" + version() + "\n" + artReset)
+
 	// Load additional config from file.
 	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)

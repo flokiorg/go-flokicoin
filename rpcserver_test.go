@@ -1,16 +1,26 @@
 package main
 
 import (
-	"encoding/hex"
-	"errors"
-	"testing"
+    "bytes"
+    "encoding/hex"
+    "errors"
+    "fmt"
+    "os"
+    "path/filepath"
+    "testing"
+    "time"
 
-	"github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
-	"github.com/flokiorg/go-flokicoin/chainjson"
-	"github.com/flokiorg/go-flokicoin/chainutil"
-	"github.com/flokiorg/go-flokicoin/mempool"
-	"github.com/flokiorg/go-flokicoin/wire"
-	"github.com/stretchr/testify/require"
+    "github.com/flokiorg/go-flokicoin/blockchain"
+    "github.com/flokiorg/go-flokicoin/database"
+    _ "github.com/flokiorg/go-flokicoin/database/ffldb"
+    "github.com/flokiorg/go-flokicoin/mining"
+    "github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
+    "github.com/flokiorg/go-flokicoin/chaincfg"
+    "github.com/flokiorg/go-flokicoin/chainjson"
+    "github.com/flokiorg/go-flokicoin/chainutil"
+    "github.com/flokiorg/go-flokicoin/mempool"
+    "github.com/flokiorg/go-flokicoin/wire"
+    "github.com/stretchr/testify/require"
 )
 
 // TestHandleTestMempoolAcceptFailDecode checks that when invalid hex string is
@@ -285,6 +295,359 @@ func TestValidateFeeRate(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------
+// AuxPoW RPC handler tests
+// ---------------------------
+
+// stubTxSource implements mining.TxSource with minimal behavior.
+type stubTxSource struct{ last time.Time }
+
+func (s stubTxSource) LastUpdated() time.Time                         { return s.last }
+func (s stubTxSource) MiningDescs() []*mining.TxDesc                 { return nil }
+func (s stubTxSource) HaveTransaction(h *chainhash.Hash) bool        { return false }
+
+// mkTempDB creates a temporary ffldb database path and returns path and cleanup.
+func mkTempDB(t *testing.T, net wire.FlokicoinNet) (string, func()) {
+    t.Helper()
+    dir := t.TempDir()
+    dbPath := filepath.Join(dir, "ffldb-aux-tests")
+    return dbPath, func() { os.RemoveAll(dir) }
+}
+
+// mkChain constructs a minimal blockchain with provided params and empty DB.
+func mkChain(t *testing.T, params *chaincfg.Params) (*blockchain.BlockChain, func()) {
+    t.Helper()
+    // Initialize logging rotator to avoid nil-pointer in chain logs during tests.
+    initLogRotator(filepath.Join(t.TempDir(), "auxpow-rpc-tests.log"))
+    setLogLevels("off")
+    dbPath, cleanup := mkTempDB(t, params.Net)
+    db, err := database.Create("ffldb", dbPath, params.Net)
+    if err != nil {
+        t.Fatalf("create db: %v", err)
+    }
+    // Build chain
+    cfg := &blockchain.Config{
+        DB:          db,
+        ChainParams: params,
+        TimeSource:  blockchain.NewMedianTime(),
+    }
+    chain, err := blockchain.New(cfg)
+    if err != nil {
+        t.Fatalf("new chain: %v", err)
+    }
+    return chain, func() {
+        db.Close()
+        cleanup()
+    }
+}
+
+// mkP2PKH returns a valid P2PKH address string for params.
+func mkP2PKH(t *testing.T, params *chaincfg.Params) string {
+    t.Helper()
+    var h20 [20]byte
+    for i := 0; i < 20; i++ {
+        h20[i] = byte(i + 1)
+    }
+    addr, err := chainutil.NewAddressPubKeyHash(h20[:], params)
+    require.NoError(t, err)
+    return addr.EncodeAddress()
+}
+
+// mkTemplate builds a minimal block template for next height with a coinbase.
+func mkTemplate(prev chainhash.Hash, height int32, bits uint32, coinbaseValue int64) *mining.BlockTemplate {
+    cb := &wire.MsgTx{
+        Version: 1,
+        TxIn: []*wire.TxIn{{
+            PreviousOutPoint: wire.OutPoint{},
+            SignatureScript:  []byte{0x51}, // OP_TRUE placeholder
+            Sequence:         0xffffffff,
+        }},
+        TxOut: []*wire.TxOut{{
+            Value:    coinbaseValue,
+            PkScript: []byte{0x6a}, // OP_RETURN placeholder; set later in handler
+        }},
+        LockTime: 0,
+    }
+    msg := &wire.MsgBlock{
+        Header: wire.BlockHeader{
+            Version:    1,
+            PrevBlock:  prev,
+            MerkleRoot: chainhash.Hash{},
+            Timestamp:  time.Unix(time.Now().Unix(), 0),
+            Bits:       bits,
+            Nonce:      0,
+        },
+        Transactions: []*wire.MsgTx{cb},
+    }
+    return &mining.BlockTemplate{Block: msg, Height: height, ValidPayAddress: false}
+}
+
+// mkAuxServer constructs an rpcServer with a prepared template and adjusted params for aux tests.
+func mkAuxServer(t *testing.T, params chaincfg.Params, tmpl *mining.BlockTemplate) *rpcServer {
+    t.Helper()
+
+    // Lower gating to current height (0) by setting AuxpowHeightEffective to 0.
+    params.AuxpowHeightEffective = 0
+
+    chain, cleanup := mkChain(t, &params)
+    t.Cleanup(cleanup)
+
+    ts := blockchain.NewMedianTime()
+    gen := mining.NewBlkTmplGenerator(&mining.Policy{}, &params, stubTxSource{last: time.Now()}, chain, ts, nil, nil)
+
+    s := &rpcServer{
+        cfg: rpcserverConfig{
+            Chain:       chain,
+            ChainParams: &params,
+            Generator:   gen,
+            TimeSource:  ts,
+            AuxCache:    newAuxCache(2 * time.Minute),
+        },
+        gbtWorkState: newGbtWorkState(ts),
+    }
+
+    // Preload template and state so updateBlockTemplate() goes fast path.
+    st := s.gbtWorkState
+    st.Lock()
+    st.template = tmpl
+    bs := s.cfg.Chain.BestSnapshot()
+    st.prevHash = &bs.Hash
+    st.lastGenerated = time.Now()
+    st.lastTxUpdate = gen.TxSource().LastUpdated()
+    st.Unlock()
+
+    return s
+}
+
+func TestCreateAuxBlock_Table(t *testing.T) {
+    type wantErr struct{ code chainjson.RPCErrorCode }
+
+    cases := []struct {
+        name      string
+        setup     func(t *testing.T) *rpcServer
+        address   string
+        wantErr   *wantErr
+        verifyOK  func(t *testing.T, s *rpcServer, res *chainjson.CreateAuxBlockResult)
+    }{
+        {
+            name: "success",
+            setup: func(t *testing.T) *rpcServer {
+                params := chaincfg.RegressionNetParams
+                prev := *params.GenesisHash
+                tmpl := mkTemplate(prev, 1, params.PowLimitBits, 50*1e8)
+                return mkAuxServer(t, params, tmpl)
+            },
+            address: "<valid>",
+            verifyOK: func(t *testing.T, s *rpcServer, res *chainjson.CreateAuxBlockResult) {
+                require := require.New(t)
+                tmpl := s.gbtWorkState.template
+                require.NotNil(tmpl)
+                require.Equal(int(s.cfg.ChainParams.AuxpowChainId), res.ChainID)
+                require.Equal(tmpl.Block.Header.PrevBlock.String(), res.PreviousBlockHash)
+                require.NotEmpty(res.Hash)
+                require.NotEmpty(res.Target)
+                require.EqualValues(tmpl.Height, res.Height)
+                require.Equal(fmt.Sprintf("%08x", tmpl.Block.Header.Bits), res.Bits)
+                require.EqualValues(tmpl.Block.Transactions[0].TxOut[0].Value, res.CoinbaseValue)
+                h, err := chainhash.NewHashFromStr(res.Hash)
+                require.NoError(err)
+                cand, ok := s.cfg.AuxCache.get(*h)
+                require.True(ok)
+                require.Equal(*h, cand.Hash)
+            },
+        },
+        {
+            name: "not-supported",
+            setup: func(t *testing.T) *rpcServer {
+                params := chaincfg.RegressionNetParams
+                params.AuxpowHeightEffective = 100
+                chain, cleanup := mkChain(t, &params)
+                t.Cleanup(cleanup)
+                ts := blockchain.NewMedianTime()
+                return &rpcServer{cfg: rpcserverConfig{
+                    Chain:       chain,
+                    ChainParams: &params,
+                    Generator:   mining.NewBlkTmplGenerator(&mining.Policy{}, &params, stubTxSource{last: time.Now()}, chain, ts, nil, nil),
+                    TimeSource:  ts,
+                    AuxCache:    newAuxCache(2 * time.Minute),
+                }, gbtWorkState: newGbtWorkState(ts)}
+            },
+            address: mkP2PKH(t, &chaincfg.RegressionNetParams),
+            wantErr: &wantErr{chainjson.ErrRPCAuxNotSupported},
+        },
+        {
+            name: "invalid-address",
+            setup: func(t *testing.T) *rpcServer {
+                params := chaincfg.RegressionNetParams
+                prev := *params.GenesisHash
+                tmpl := mkTemplate(prev, 1, params.PowLimitBits, 25*1e8)
+                return mkAuxServer(t, params, tmpl)
+            },
+            address: "invalid",
+            wantErr: &wantErr{chainjson.ErrRPCInvalidAddressOrKey},
+        },
+        {
+            name: "address-wrong-net",
+            setup: func(t *testing.T) *rpcServer {
+                params := chaincfg.RegressionNetParams
+                prev := *params.GenesisHash
+                tmpl := mkTemplate(prev, 1, params.PowLimitBits, 25*1e8)
+                return mkAuxServer(t, params, tmpl)
+            },
+            address: mkP2PKH(t, &chaincfg.MainNetParams),
+            wantErr: &wantErr{chainjson.ErrRPCInvalidAddressOrKey},
+        },
+    }
+
+    for _, tc := range cases {
+        t.Run(tc.name, func(t *testing.T) {
+            s := tc.setup(t)
+            addr := tc.address
+            if addr == "<valid>" {
+                addr = mkP2PKH(t, s.cfg.ChainParams)
+            }
+            cmd := &chainjson.CreateAuxBlockCmd{Address: addr}
+            resAny, err := handleCreateAuxBlock(s, cmd, make(chan struct{}))
+            if tc.wantErr != nil {
+                require.Error(t, err)
+                rpcErr := err.(*chainjson.RPCError)
+                require.Equal(t, tc.wantErr.code, rpcErr.Code)
+                return
+            }
+            require.NoError(t, err)
+            res := resAny.(*chainjson.CreateAuxBlockResult)
+            if tc.verifyOK != nil {
+                tc.verifyOK(t, s, res)
+            }
+        })
+    }
+}
+
+func TestSubmitAuxBlock_Table(t *testing.T) {
+    type wantErr struct{ code chainjson.RPCErrorCode }
+
+    cases := []struct {
+        name    string
+        setup   func(t *testing.T) (*rpcServer, *chainjson.SubmitAuxBlockCmd)
+        wantRes *chainjson.SubmitAuxBlockResult
+        wantErr *wantErr
+    }{
+        {
+            name: "not-supported",
+            setup: func(t *testing.T) (*rpcServer, *chainjson.SubmitAuxBlockCmd) {
+                params := chaincfg.RegressionNetParams
+                params.AuxpowHeightEffective = 10
+                chain, cleanup := mkChain(t, &params)
+                t.Cleanup(cleanup)
+                s := &rpcServer{cfg: rpcserverConfig{Chain: chain, ChainParams: &params, AuxCache: newAuxCache(2 * time.Minute)}}
+                cmd := &chainjson.SubmitAuxBlockCmd{Hash: chainhash.Hash{}.String(), AuxPow: ""}
+                return s, cmd
+            },
+            wantErr: &wantErr{chainjson.ErrRPCAuxNotSupported},
+        },
+        {
+            name: "no-cache",
+            setup: func(t *testing.T) (*rpcServer, *chainjson.SubmitAuxBlockCmd) {
+                params := chaincfg.RegressionNetParams
+                params.AuxpowHeightEffective = 0
+                chain, cleanup := mkChain(t, &params)
+                t.Cleanup(cleanup)
+                s := &rpcServer{cfg: rpcserverConfig{Chain: chain, ChainParams: &params, AuxCache: nil}}
+                cmd := &chainjson.SubmitAuxBlockCmd{Hash: chainhash.Hash{}.String(), AuxPow: ""}
+                return s, cmd
+            },
+            wantRes: ptrSubmit(false),
+        },
+        {
+            name: "invalid-hash",
+            setup: func(t *testing.T) (*rpcServer, *chainjson.SubmitAuxBlockCmd) {
+                params := chaincfg.RegressionNetParams
+                params.AuxpowHeightEffective = 0
+                chain, cleanup := mkChain(t, &params)
+                t.Cleanup(cleanup)
+                s := &rpcServer{cfg: rpcserverConfig{Chain: chain, ChainParams: &params, AuxCache: newAuxCache(2 * time.Minute)}}
+                cmd := &chainjson.SubmitAuxBlockCmd{Hash: "not-a-hash", AuxPow: ""}
+                return s, cmd
+            },
+            wantErr: &wantErr{chainjson.ErrRPCAuxUnknownHash},
+        },
+        {
+            name: "expired-candidate",
+            setup: func(t *testing.T) (*rpcServer, *chainjson.SubmitAuxBlockCmd) {
+                params := chaincfg.RegressionNetParams
+                params.AuxpowHeightEffective = 0
+                chain, cleanup := mkChain(t, &params)
+                t.Cleanup(cleanup)
+                s := &rpcServer{cfg: rpcserverConfig{Chain: chain, ChainParams: &params, AuxCache: newAuxCache(2 * time.Minute)}}
+                cmd := &chainjson.SubmitAuxBlockCmd{Hash: chainhash.Hash{}.String(), AuxPow: ""}
+                return s, cmd
+            },
+            wantErr: &wantErr{chainjson.ErrRPCAuxCandidateExpired},
+        },
+        {
+            name: "invalid-auxpow-hex",
+            setup: func(t *testing.T) (*rpcServer, *chainjson.SubmitAuxBlockCmd) {
+                params := chaincfg.RegressionNetParams
+                params.AuxpowHeightEffective = 0
+                chain, cleanup := mkChain(t, &params)
+                t.Cleanup(cleanup)
+                s := &rpcServer{cfg: rpcserverConfig{Chain: chain, ChainParams: &params, AuxCache: newAuxCache(2 * time.Minute)}}
+                blk := &wire.MsgBlock{Header: wire.BlockHeader{PrevBlock: *params.GenesisHash, Bits: params.PowLimitBits}}
+                cand := &AuxCandidate{Hash: chainhash.DoubleHashH([]byte("X")), Height: 1, Block: blk}
+                s.cfg.AuxCache.put(cand)
+                cmd := &chainjson.SubmitAuxBlockCmd{Hash: cand.Hash.String(), AuxPow: "zz-not-hex"}
+                return s, cmd
+            },
+            wantErr: &wantErr{chainjson.ErrRPCAuxInvalidAuxPow},
+        },
+        {
+            name: "parse-auxpow-fail",
+            setup: func(t *testing.T) (*rpcServer, *chainjson.SubmitAuxBlockCmd) {
+                params := chaincfg.RegressionNetParams
+                params.AuxpowHeightEffective = 0
+                chain, cleanup := mkChain(t, &params)
+                t.Cleanup(cleanup)
+                s := &rpcServer{cfg: rpcserverConfig{Chain: chain, ChainParams: &params, AuxCache: newAuxCache(2 * time.Minute)}}
+                blk := &wire.MsgBlock{Header: wire.BlockHeader{PrevBlock: *params.GenesisHash, Bits: params.PowLimitBits}}
+                cand := &AuxCandidate{Hash: chainhash.DoubleHashH([]byte("Y")), Height: 1, Block: blk}
+                s.cfg.AuxCache.put(cand)
+                cmd := &chainjson.SubmitAuxBlockCmd{Hash: cand.Hash.String(), AuxPow: hex.EncodeToString([]byte{})}
+                return s, cmd
+            },
+            wantErr: &wantErr{chainjson.ErrRPCAuxInvalidAuxPow},
+        },
+    }
+
+    for _, tc := range cases {
+        t.Run(tc.name, func(t *testing.T) {
+            s, cmd := tc.setup(t)
+            res, err := handleSubmitAuxBlock(s, cmd, make(chan struct{}))
+            if tc.wantErr != nil {
+                require.Error(t, err)
+                rpcErr := err.(*chainjson.RPCError)
+                require.Equal(t, tc.wantErr.code, rpcErr.Code)
+                return
+            }
+            require.NoError(t, err)
+            if tc.wantRes != nil {
+                require.Equal(t, *tc.wantRes, res)
+            }
+        })
+    }
+}
+
+func ptrSubmit(b bool) *chainjson.SubmitAuxBlockResult { r := chainjson.SubmitAuxBlockResult(b); return &r }
+
+// Optional: build a minimal auxpow header just to go past parse for future tests.
+func buildMinimalAuxPowHex(t *testing.T) string {
+    var aph wire.AuxPowHeader
+    var buf bytes.Buffer
+    // empty fields will fail Check later, but parse succeeds only if encoding ok.
+    require.NoError(t, aph.Serialize(&buf))
+    return hex.EncodeToString(buf.Bytes())
+}
+
 
 // TestHandleTestMempoolAcceptFees checks that the `Fees` field is correctly
 // populated based on the max fee rate and the tx being checked.

@@ -68,9 +68,13 @@ var (
 	// It is the value 1 encoded as an unsigned big-endian uint32.
 	blockIdxBucketID = [4]byte{0x00, 0x00, 0x00, 0x01}
 
-	// blockIdxBucketName is the bucket used internally to track block
-	// metadata.
-	blockIdxBucketName = []byte("ffldb-blockidx")
+    // blockIdxBucketName is the bucket used internally to track block
+    // metadata.
+    blockIdxBucketName = []byte("ffldb-blockidx")
+
+    // auxPowHeaderBucketName stores AuxPoW header payloads keyed by block hash.
+    // Must match the bucket name created by the chain state initialization.
+    auxPowHeaderBucketName = []byte("auxpowhdridx")
 
 	// writeLocKeyName is the key used to store the current write file
 	// location.
@@ -1208,6 +1212,67 @@ func (tx *transaction) HasBlock(hash *chainhash.Hash) (bool, error) {
 	}
 
 	return tx.hasBlock(hash), nil
+}
+
+// StoreAuxPowHeader stores the AuxPoW header payload (or an explicit nil marker)
+// associated with the given block hash into the DB's metadata.
+//
+// This function is part of the database.Tx interface implementation.
+func (tx *transaction) StoreAuxPowHeader(hash *chainhash.Hash, aph *wire.AuxPowHeader) error {
+    // Ensure transaction state is valid.
+    if err := tx.checkClosed(); err != nil {
+        return err
+    }
+    // Ensure the transaction is writable.
+    if !tx.writable {
+        str := "store auxpow header requires a writable database transaction"
+        return makeDbErr(database.ErrTxNotWritable, str, nil)
+    }
+
+    bkt := tx.metaBucket.Bucket(auxPowHeaderBucketName)
+    if bkt == nil {
+        return fmt.Errorf("auxpow header bucket missing")
+    }
+    var val []byte
+    if aph == nil {
+        val = []byte{0x00}
+    } else {
+        var buf bytes.Buffer
+        if err := aph.Serialize(&buf); err != nil {
+            return err
+        }
+        val = append([]byte{0x01}, buf.Bytes()...)
+    }
+    return bkt.Put(hash[:], val)
+}
+
+// FetchAuxPowHeader loads the persisted AuxPoW payload (if any) for the given
+// block hash. It returns (nil, false, nil) when no entry is present, (nil, true, nil)
+// when an explicit nil marker was stored, or (payload, true, nil) when present.
+//
+// This function is part of the database.Tx interface implementation.
+func (tx *transaction) FetchAuxPowHeader(hash *chainhash.Hash) (*wire.AuxPowHeader, bool, error) {
+    // Ensure transaction state is valid.
+    if err := tx.checkClosed(); err != nil {
+        return nil, false, err
+    }
+    bkt := tx.metaBucket.Bucket(auxPowHeaderBucketName)
+    if bkt == nil {
+        return nil, false, nil
+    }
+    v := bkt.Get(hash[:])
+    if v == nil {
+        return nil, false, nil
+    }
+    if len(v) == 0 || v[0] == 0x00 {
+        return nil, true, nil
+    }
+    // v[0] == 0x01, payload follows
+    var aph wire.AuxPowHeader
+    if err := aph.Deserialize(bytes.NewReader(v[1:])); err != nil {
+        return nil, true, err
+    }
+    return &aph, true, nil
 }
 
 // HasBlocks returns whether or not the blocks with the provided hashes

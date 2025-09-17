@@ -830,7 +830,10 @@ mempoolLoop:
 		Bits:       reqDifficulty,
 	}
 
-	// msgBlock.Header.SetChainID(g.chainParams.AuxpowChainId) // Embed the chain ID into the block version
+	// Stamp ChainID on normal blocks once the activation height is reached.
+	if nextBlockHeight >= g.chain.ChainParams().AuxpowHeightEffective {
+		msgBlock.Header.SetChainID(g.chain.ChainParams().AuxpowChainId)
+	}
 
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {

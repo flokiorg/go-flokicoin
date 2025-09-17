@@ -72,6 +72,12 @@ var (
 	// unspent transaction output set.
 	utxoSetBucketName = []byte("utxosetv2")
 
+	// auxPowHeaderBucketName is the name of the db bucket used to persist
+	// AuxPoW payloads (wire.AuxPowHeader) by block hash. Values are framed as:
+	//  0x00                      => AuxPoW explicitly nil for this block
+	//  0x01 || AuxPowHeaderBytes => AuxPoW payload present
+	auxPowHeaderBucketName = []byte("auxpowhdridx")
+
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
 	byteOrder = binary.LittleEndian
@@ -1137,6 +1143,10 @@ func (b *BlockChain) createChainState() error {
 		if err != nil {
 			return err
 		}
+		// Create the bucket that houses AuxPoW payloads by block hash.
+		if _, err = meta.CreateBucket(auxPowHeaderBucketName); err != nil {
+			return err
+		}
 		err = dbPutVersion(dbTx, spendJournalVersionKeyName,
 			latestSpendJournalBucketVersion)
 		if err != nil {
@@ -1195,6 +1205,19 @@ func (b *BlockChain) initChainState() error {
 		if err != nil {
 			return nil
 		}
+	}
+
+	// Ensure the AuxPoW header bucket exists for already-initialized DBs.
+	if err := b.db.Update(func(dbTx database.Tx) error {
+		meta := dbTx.Metadata()
+		if meta.Bucket(auxPowHeaderBucketName) == nil {
+			if _, err := meta.CreateBucket(auxPowHeaderBucketName); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// Attempt to load the chain state from the database.
@@ -1326,7 +1349,7 @@ func deserializeBlockRow(blockRow []byte) (*wire.BlockHeader, blockStatus, error
 	buffer := bytes.NewReader(blockRow)
 
 	var header wire.BlockHeader
-	err := header.Deserialize(buffer)
+	err := header.DeserializeHeader(buffer)
 	if err != nil {
 		return nil, statusNone, err
 	}
@@ -1393,7 +1416,10 @@ func dbStoreBlockNode(dbTx database.Tx, node *blockNode) error {
 	// Serialize block data to be stored.
 	w := bytes.NewBuffer(make([]byte, 0, blockHdrSize+1))
 	header := node.Header()
-	err := header.Serialize(w)
+	// Store only the 80-byte base header regardless of AuxPoW presence to keep
+	// the block index lean and avoid requiring AuxPoW payload during header
+	// serialization.
+	err := header.SerializeHeader(w)
 	if err != nil {
 		return err
 	}
@@ -1419,7 +1445,36 @@ func dbStoreBlock(dbTx database.Tx, block *chainutil.Block) error {
 	if hasBlock {
 		return nil
 	}
-	return dbTx.StoreBlock(block)
+	if err := dbTx.StoreBlock(block); err != nil {
+		return err
+	}
+
+	// Persist AuxPoW payload presence for this block if applicable.
+	// This does not affect consensus or header index; it's auxiliary context.
+	hdr := &block.MsgBlock().Header
+	if hdr.AuxPow() {
+		if err := dbTx.StoreAuxPowHeader(block.Hash(), hdr.AuxPowHeader); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// LoadAuxPowHeader returns the AuxPoW header payload for a block hash if it has
+// been persisted. The second return value indicates whether an entry (including
+// an explicit nil) exists for the hash.
+func (b *BlockChain) LoadAuxPowHeader(hash *chainhash.Hash) (*wire.AuxPowHeader, bool, error) {
+	var out *wire.AuxPowHeader
+	var ok bool
+	var err error
+	e := b.db.View(func(dbTx database.Tx) error {
+		out, ok, err = dbTx.FetchAuxPowHeader(hash)
+		return err
+	})
+	if e != nil {
+		return nil, false, e
+	}
+	return out, ok, nil
 }
 
 // blockIndexKey generates the binary key for an entry in the block index

@@ -9,8 +9,9 @@
 package database
 
 import (
-	"github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
-	"github.com/flokiorg/go-flokicoin/chainutil"
+    "github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
+    "github.com/flokiorg/go-flokicoin/chainutil"
+    "github.com/flokiorg/go-flokicoin/wire"
 )
 
 // Cursor represents a cursor over key/value pairs and nested buckets of a
@@ -227,8 +228,8 @@ type Tx interface {
 	//   - ErrTxNotWritable if attempted against a read-only transaction
 	//   - ErrTxClosed if the transaction has already been closed
 	//
-	// Other errors are possible depending on the implementation.
-	StoreBlock(block *chainutil.Block) error
+    // Other errors are possible depending on the implementation.
+    StoreBlock(block *chainutil.Block) error
 
 	// HasBlock returns whether or not a block with the given hash exists
 	// in the database.
@@ -237,8 +238,19 @@ type Tx interface {
 	// be returned (other implementation-specific errors are possible):
 	//   - ErrTxClosed if the transaction has already been closed
 	//
-	// Other errors are possible depending on the implementation.
-	HasBlock(hash *chainhash.Hash) (bool, error)
+    // Other errors are possible depending on the implementation.
+    HasBlock(hash *chainhash.Hash) (bool, error)
+
+    // StoreAuxPowHeader stores the AuxPoW header payload (or an explicit nil marker)
+    // associated with the given block hash into the DB's metadata.
+    // The implementation must expect that the required bucket already exists.
+    StoreAuxPowHeader(hash *chainhash.Hash, aph *wire.AuxPowHeader) error
+
+    // FetchAuxPowHeader loads the persisted AuxPoW payload (if any) for the
+    // given block hash. It returns (nil, false, nil) when no entry is present,
+    // (nil, true, nil) when an explicit nil marker was stored, or
+    // (payload, true, nil) when present.
+    FetchAuxPowHeader(hash *chainhash.Hash) (*wire.AuxPowHeader, bool, error)
 
 	// HasBlocks returns whether or not the blocks with the provided hashes
 	// exist in the database.

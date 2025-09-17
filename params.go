@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	Reset    = "\033[0m"
-	Orange   = "\033[38;2;177;128;10m"
-	Bright   = "\033[1m"
-	bonerArt = `
+	artReset  = "\033[0m"
+	artOrange = "\033[38;2;177;128;10m"
+	artBright = "\033[1m"
+	artText   = `
  _           _    _      _           _       
 | |         | |  (_)    | |         (_)      
 | |     ___ | | ___  ___| |__   __ _ _ _ __  

@@ -258,6 +258,30 @@ var helpDescsEnUS = map[string]string{
 	"getblockverboseresult-nextblockhash":     "The hash of the next block (only if there is one)",
 	"getblockverboseresult-strippedsize":      "The size of the block without witness data",
 	"getblockverboseresult-weight":            "The weight of the block",
+	"getblockverboseresult-auxpow":            "AuxPoW data for merged mining (present on AuxPoW blocks).",
+
+	// AuxPowResult help.
+	"auxpowresult-tx":                "Parent coinbase transaction details.",
+	"auxpowresult-index":             "Index in the coinbase merkle tree (usually 0).",
+	"auxpowresult-chainindex":        "Index in the aux chain merkle tree.",
+	"auxpowresult-merklebranch":      "Merkle branch from coinbase tx to parent merkle root (hex hashes).",
+	"auxpowresult-chainmerklebranch": "Merkle branch from child hash to aux chain root (hex hashes).",
+	"auxpowresult-parentblock":       "Parent block header as hex.",
+
+	// AuxPowTxResult help.
+	"auxpowtxresult-hex":      "Hex-encoded parent coinbase transaction.",
+	"auxpowtxresult-txid":     "TXID of the parent coinbase transaction.",
+	"auxpowtxresult-version":  "Version of the parent coinbase transaction.",
+	"auxpowtxresult-vin":      "Inputs of the parent coinbase transaction.",
+	"auxpowtxresult-vout":     "Outputs of the parent coinbase transaction.",
+	"auxpowtxresult-locktime": "Locktime of the parent coinbase transaction.",
+
+	// AuxPowVin help.
+	"auxpowvin-coinbase": "Hex-encoded coinbase signature script.",
+
+	// AuxPowVout help.
+	"auxpowvout-value":        "Output value in loki (base units).",
+	"auxpowvout-scriptPubKey": "Hex-encoded scriptPubKey.",
 
 	// GetBlockCountCmd help.
 	"getblockcount--synopsis": "Returns the number of blocks in the longest block chain.",
@@ -313,6 +337,34 @@ var helpDescsEnUS = map[string]string{
 
 	// GetBlockTemplateResultAux help.
 	"getblocktemplateresultaux-flags": "Hex-encoded byte-for-byte data to include in the coinbase signature script",
+
+	// AuxPoW RPCs help.
+	"createauxblock--synopsis":   "Creates and returns an AuxPoW mining candidate for merged mining.",
+	"createauxblock-address":     "Optional payout address for the coinbase reward; must be valid for this network.",
+	"createauxblock--condition0": "candidate available",
+	"createauxblock--condition1": "candidate unavailable",
+	"createauxblock--condition2": "candidate unavailable",
+	"createauxblock--result1":    "Nothing",
+	"createauxblock--result2":    "Nothing",
+
+	"submitauxblock-hash":        "Hex string of the candidate block hash previously returned by createauxblock.",
+	"submitauxblock-auxpow":      "Hex-encoded AuxPoW data (parent coinbase, merkle branches, parent header).",
+	"submitauxblock--synopsis":   "Submits AuxPoW data for a previously created candidate to be validated and accepted.",
+	"submitauxblock--condition0": "processed (accepted or rejected)",
+	"submitauxblock--condition1": "processed (duplicate or already accepted)",
+	"submitauxblock--condition2": "not processed (unknown/expired)",
+	"submitauxblock--result0":    "True if the block was accepted, false otherwise",
+	"submitauxblock--result1":    "Nothing",
+	"submitauxblock--result2":    "Nothing",
+
+	// CreateAuxBlockResult field help.
+	"createauxblockresult-hash":              "Hex-encoded aux block hash identifier for the candidate.",
+	"createauxblockresult-chainid":           "AuxPoW chain ID for this network.",
+	"createauxblockresult-previousblockhash": "Hex-encoded hash of the previous block (big-endian).",
+	"createauxblockresult-coinbasevalue":     "Total coinbase value available for this block in satoshis.",
+	"createauxblockresult-bits":              "Compact representation of the target difficulty for the child block (hex).",
+	"createauxblockresult-height":            "Height of the candidate block.",
+	"createauxblockresult-target":            "Full 256-bit big-endian target threshold as hex.",
 
 	// GetBlockTemplateResult help.
 	"getblocktemplateresult-bits":                       "Hex-encoded compressed difficulty",
@@ -941,15 +993,19 @@ var rpcResultTypes = map[string][]interface{}{
 	"estimatefee":      {(*float64)(nil)},
 	"estimatesmartfee": {(*float64)(nil)},
 
-	"generate":           {(*[]string)(nil)},
-	"getaddednodeinfo":   {(*[]string)(nil), (*[]chainjson.GetAddedNodeInfoResult)(nil)},
-	"getbestblock":       {(*chainjson.GetBestBlockResult)(nil)},
-	"getbestblockhash":   {(*string)(nil)},
-	"getblock":           {(*string)(nil), (*chainjson.GetBlockVerboseResult)(nil)},
-	"getblockcount":      {(*int64)(nil)},
-	"getblockhash":       {(*string)(nil)},
-	"getblockheader":     {(*string)(nil), (*chainjson.GetBlockHeaderVerboseResult)(nil)},
-	"getblocktemplate":   {(*chainjson.GetBlockTemplateResult)(nil), (*string)(nil), nil},
+	"generate":         {(*[]string)(nil)},
+	"getaddednodeinfo": {(*[]string)(nil), (*[]chainjson.GetAddedNodeInfoResult)(nil)},
+	"getbestblock":     {(*chainjson.GetBestBlockResult)(nil)},
+	"getbestblockhash": {(*string)(nil)},
+	"getblock":         {(*string)(nil), (*chainjson.GetBlockVerboseResult)(nil)},
+	"getblockcount":    {(*int64)(nil)},
+	"getblockhash":     {(*string)(nil)},
+	"getblockheader":   {(*string)(nil), (*chainjson.GetBlockHeaderVerboseResult)(nil)},
+
+	"getblocktemplate": {(*chainjson.GetBlockTemplateResult)(nil), (*string)(nil), nil},
+	"createauxblock":   {(*chainjson.CreateAuxBlockResult)(nil), nil, nil},
+	"submitauxblock":   {(*chainjson.SubmitAuxBlockResult)(nil), nil, nil},
+
 	"getblockchaininfo":  {(*chainjson.GetBlockChainInfoResult)(nil)},
 	"getchaintips":       {(*[]chainjson.GetChainTipsResult)(nil)},
 	"getcfilter":         {(*string)(nil)},
