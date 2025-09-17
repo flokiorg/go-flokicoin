@@ -76,8 +76,9 @@ const (
 	// in the memory pool.
 	gbtRegenerateSeconds = 60
 
-	// maxProtocolVersion is the max protocol version the server supports.
-	maxProtocolVersion = 70002
+    // maxProtocolVersion is the max protocol version the server supports.
+    // Align with the latest supported by the wire package.
+    maxProtocolVersion = wire.ProtocolVersion
 
 	// defaultMaxFeeRate is the default value to use(0.1 FLC/kvB) when the
 	// `MaxFee` field is not set when calling `testmempoolaccept`.
@@ -1185,7 +1186,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 
 	params := s.cfg.ChainParams
 	blockHeader := &blk.MsgBlock().Header
-    blockReply := chainjson.GetBlockVerboseResult{
+	blockReply := chainjson.GetBlockVerboseResult{
 		Hash:          c.Hash,
 		Version:       blockHeader.Version,
 		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version),
@@ -1201,62 +1202,62 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits), 16),
 		Difficulty:    getDifficultyRatio(blockHeader.Bits, params),
 		NextHash:      nextHashString,
-        ChainWork:     fmt.Sprintf("%064x", chainWork),
-    }
+		ChainWork:     fmt.Sprintf("%064x", chainWork),
+	}
 
-    // Populate AuxPow as structured object if present.
-    if blockHeader.AuxPowHeader != nil {
-        aph := blockHeader.AuxPowHeader
+	// Populate AuxPow as structured object if present.
+	if blockHeader.AuxPowHeader != nil {
+		aph := blockHeader.AuxPowHeader
 
-        // tx hex and txid
-        var txBuf bytes.Buffer
-        _ = aph.CoinbaseTx.Serialize(&txBuf)
-        txHex := hex.EncodeToString(txBuf.Bytes())
-        txid := aph.CoinbaseTx.TxHash().String()
+		// tx hex and txid
+		var txBuf bytes.Buffer
+		_ = aph.CoinbaseTx.Serialize(&txBuf)
+		txHex := hex.EncodeToString(txBuf.Bytes())
+		txid := aph.CoinbaseTx.TxHash().String()
 
-        // vin: coinbase script
-        vin := []chainjson.AuxPowVin{{Coinbase: hex.EncodeToString(aph.CoinbaseTx.TxIn[0].SignatureScript)}}
+		// vin: coinbase script
+		vin := []chainjson.AuxPowVin{{Coinbase: hex.EncodeToString(aph.CoinbaseTx.TxIn[0].SignatureScript)}}
 
-        // vout: value + scriptPubKey hex
-        vout := make([]chainjson.AuxPowVout, len(aph.CoinbaseTx.TxOut))
-        for i, o := range aph.CoinbaseTx.TxOut {
-            vout[i] = chainjson.AuxPowVout{
-                Value:        o.Value,
-                ScriptPubKey: hex.EncodeToString(o.PkScript),
-            }
-        }
+		// vout: value + scriptPubKey hex
+		vout := make([]chainjson.AuxPowVout, len(aph.CoinbaseTx.TxOut))
+		for i, o := range aph.CoinbaseTx.TxOut {
+			vout[i] = chainjson.AuxPowVout{
+				Value:        o.Value,
+				ScriptPubKey: hex.EncodeToString(o.PkScript),
+			}
+		}
 
-        // branches
-        merkleBranch := make([]string, len(aph.CoinbaseBranch.Hashes))
-        for i := range aph.CoinbaseBranch.Hashes {
-            merkleBranch[i] = aph.CoinbaseBranch.Hashes[i].String()
-        }
-        chainMerkleBranch := make([]string, len(aph.BlockChainBranch.Hashes))
-        for i := range aph.BlockChainBranch.Hashes {
-            chainMerkleBranch[i] = aph.BlockChainBranch.Hashes[i].String()
-        }
+		// branches
+		merkleBranch := make([]string, len(aph.CoinbaseBranch.Hashes))
+		for i := range aph.CoinbaseBranch.Hashes {
+			merkleBranch[i] = aph.CoinbaseBranch.Hashes[i].String()
+		}
+		chainMerkleBranch := make([]string, len(aph.BlockChainBranch.Hashes))
+		for i := range aph.BlockChainBranch.Hashes {
+			chainMerkleBranch[i] = aph.BlockChainBranch.Hashes[i].String()
+		}
 
-        // parent block header hex
-        var ph bytes.Buffer
-        _ = aph.ParentBlockHeader.Serialize(&ph)
-        parentHex := hex.EncodeToString(ph.Bytes())
+		// parent block header hex
+		var ph bytes.Buffer
+		_ = aph.ParentBlockHeader.Serialize(&ph)
+		parentHex := hex.EncodeToString(ph.Bytes())
 
-        blockReply.AuxPow = &chainjson.AuxPowResult{
-            Tx: chainjson.AuxPowTxResult{
-                Hex:      txHex,
-                Txid:     txid,
-                Version:  aph.CoinbaseTx.Version,
-                Vin:      vin,
-                Vout:     vout,
-                LockTime: aph.CoinbaseTx.LockTime,
-            },
-            Index:             aph.CoinbaseBranch.SideMask,
-            ChainIndex:        aph.BlockChainBranch.SideMask,
-            MerkleBranch:      merkleBranch,
-            ChainMerkleBranch: chainMerkleBranch,
-            ParentBlock:       parentHex,
-        }
-    }
+		blockReply.AuxPow = &chainjson.AuxPowResult{
+			Tx: chainjson.AuxPowTxResult{
+				Hex:      txHex,
+				Txid:     txid,
+				Version:  aph.CoinbaseTx.Version,
+				Vin:      vin,
+				Vout:     vout,
+				LockTime: aph.CoinbaseTx.LockTime,
+			},
+			Index:             aph.CoinbaseBranch.SideMask,
+			ChainIndex:        aph.BlockChainBranch.SideMask,
+			MerkleBranch:      merkleBranch,
+			ChainMerkleBranch: chainMerkleBranch,
+			ParentBlock:       parentHex,
+		}
+	}
 
 	if *c.Verbosity == 1 {
 		transactions := blk.Transactions()
@@ -2486,54 +2487,95 @@ func handleGetHeaders(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 // handleGetInfo implements the getinfo command. We only return the fields
 // that are not related to wallet functionality.
 func handleGetInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	best := s.cfg.Chain.BestSnapshot()
-	ret := &chainjson.InfoChainResult{
-		Version:         int32(1000000*appMajor + 10000*appMinor + 100*appPatch),
-		Subversion:      "/flokicoind:1.0.5/",
-		ProtocolVersion: int32(maxProtocolVersion),
-		Blocks:          best.Height,
-		TimeOffset:      int64(s.cfg.TimeSource.Offset().Seconds()),
-		Connections:     s.cfg.ConnMgr.ConnectedCount(),
-		Proxy:           cfg.Proxy,
-		Difficulty:      getDifficultyRatio(best.Bits, s.cfg.ChainParams),
-		TestNet:         cfg.TestNet3,
-		RelayFee:        cfg.minRelayTxFee.ToFLC(),
+    best := s.cfg.Chain.BestSnapshot()
+    subVersion := fmt.Sprintf("flokicoind:%d.%d.%d-%s", appMajor, appMinor, appPatch, appPreRelease)
+    if appBuild != "" {
+        subVersion = fmt.Sprintf("%s+%s", subVersion, appBuild)
+    }
+    // Derive local service flags similar to server initialization.
+    services := defaultServices
+    if cfg.NoPeerBloomFilters {
+        services &^= wire.SFNodeBloom
+    }
+    if cfg.NoCFilters {
+        services &^= wire.SFNodeCF
+    }
+    if cfg.Prune != 0 {
+        services &^= wire.SFNodeNetwork
+    }
 
-		// New Fields
-		LocalServices: "0000000000000c08", // Example default value
-		LocalServicesNames: []string{
-			"WITNESS",
-			"NETWORK_LIMITED",
-			"P2P_V2",
-		},
-		LocalRelay:     true, // Default to true
-		NetworkActive:  true, // Default to active
-		ConnectionsIn:  0,    // Default inbound connections
-		ConnectionsOut: 0,    // Default outbound connections
-		Networks: []chainjson.NetworksResult{ // Default network info
-			{
-				Name:                      "ipv4",
-				Limited:                   false,
-				Reachable:                 true,
-				Proxy:                     "",
-				ProxyRandomizeCredentials: false,
-			},
-			{
-				Name:                      "ipv6",
-				Limited:                   false,
-				Reachable:                 true,
-				Proxy:                     "",
-				ProxyRandomizeCredentials: false,
-			},
-		},
-		IncrementalFee: 0.00001000,
-		LocalAddresses: []string{},
-		Warnings: []string{
-			"This is a pre-release test build - use at your own risk - do not use for mining or merchant applications",
-		},
-	}
+    // Build LocalServices names list from the pretty-printed string.
+    // wire.ServiceFlag.String returns names separated by '|'.
+    svcStr := services.String()
+    svcNames := []string{}
+    if svcStr != "0x0" && svcStr != "" {
+        for _, part := range strings.Split(svcStr, "|") {
+            if part != "" {
+                svcNames = append(svcNames, part)
+            }
+        }
+    }
 
-	return ret, nil
+    // Count inbound/outbound connections.
+    var inCount, outCount int32
+    for _, p := range s.cfg.ConnMgr.ConnectedPeers() {
+        if p.ToPeer().Inbound() {
+            inCount++
+        } else {
+            outCount++
+        }
+    }
+
+    // Collect known local addresses.
+    localAddrs := []string{}
+    for _, na := range s.cfg.ConnMgr.NodeAddresses() {
+        host := na.Addr.String()
+        port := strconv.Itoa(int(na.Port))
+        localAddrs = append(localAddrs, net.JoinHostPort(host, port))
+    }
+
+    ret := &chainjson.InfoChainResult{
+        Version:         int32(1000000*appMajor + 10000*appMinor + 100*appPatch),
+        Subversion:      fmt.Sprintf("/%s/", subVersion),
+        ProtocolVersion: int32(maxProtocolVersion),
+        Blocks:          best.Height,
+        TimeOffset:      int64(s.cfg.TimeSource.Offset().Seconds()),
+        Connections:     s.cfg.ConnMgr.ConnectedCount(),
+        Proxy:           cfg.Proxy,
+        Difficulty:      getDifficultyRatio(best.Bits, s.cfg.ChainParams),
+        TestNet:         s.cfg.ChainParams.Net != wire.MainNet,
+        RelayFee:        cfg.minRelayTxFee.ToFLC(),
+
+        LocalServices:      svcStr,
+        LocalServicesNames: svcNames,
+        LocalRelay:         true,
+        NetworkActive:      true,
+        ConnectionsIn:      inCount,
+        ConnectionsOut:     outCount,
+        Networks: []chainjson.NetworksResult{
+            {
+                Name:                      "ipv4",
+                Limited:                   false,
+                Reachable:                 true,
+                Proxy:                     "",
+                ProxyRandomizeCredentials: false,
+            },
+            {
+                Name:                      "ipv6",
+                Limited:                   false,
+                Reachable:                 true,
+                Proxy:                     "",
+                ProxyRandomizeCredentials: false,
+            },
+        },
+        IncrementalFee: 0.00001000,
+        LocalAddresses: localAddrs,
+        Warnings: []string{
+            "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications",
+        },
+    }
+
+    return ret, nil
 }
 
 // handleGetInfo implements the getinfo command. We only return the fields
