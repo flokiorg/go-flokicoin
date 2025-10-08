@@ -5,6 +5,8 @@
 
 package chainutil
 
+import "math"
+
 const (
 	// LokiPerFlokicent is the number of loki in one flokicoin cent.
 	LokiPerFlokicent = 1e6
@@ -12,10 +14,8 @@ const (
 	// LokiPerFlokicoin is the number of loki in one flokicoin (1 FLC).
 	LokiPerFlokicoin = 1e8
 
-	// MaxLoki is the maximum transaction amount allowed in loki and is the maximum number of loki
-	// in circulation over the first ~5 years.
-	// ⚠️ Recalculate and update this value every five years to reflect new issuance.
-	// TODO: Replace this hardcoded value with a dynamic calculation based on the current block height and reward schedule.
-	MaxLoki = 5e8 * LokiPerFlokicoin
-	// MaxLoki = 21e6 * LokiPerFlokicoin
+	// MaxLoki defines the maximum amount that can be expressed without
+	// overflowing a signed 64-bit integer. Flokicoin uses perpetual inflation,
+	// so we reserve the entire positive int64 space for amounts.
+	MaxLoki int64 = math.MaxInt64
 )

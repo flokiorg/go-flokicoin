@@ -27,28 +27,28 @@ func TestAmountCreation(t *testing.T) {
 			expected: 0,
 		},
 		{
-			name:     "max producible",
+			name:     "large positive amount",
 			amount:   5e8,
 			valid:    true,
-			expected: MaxLoki,
+			expected: Amount(500_000_000 * LokiPerFlokicoin),
 		},
 		{
-			name:     "min producible",
+			name:     "large negative amount",
 			amount:   -5e8,
 			valid:    true,
-			expected: -MaxLoki,
+			expected: -Amount(500_000_000 * LokiPerFlokicoin),
 		},
 		{
-			name:     "exceeds max producible",
+			name:     "exceeds large positive by one loki",
 			amount:   5e8 + 1e-8,
 			valid:    true,
-			expected: MaxLoki + 1,
+			expected: Amount(500_000_000*LokiPerFlokicoin + 1),
 		},
 		{
-			name:     "exceeds min producible",
+			name:     "exceeds large negative by one loki",
 			amount:   -5e8 - 1e-8,
 			valid:    true,
-			expected: -MaxLoki - 1,
+			expected: Amount(-500_000_000*LokiPerFlokicoin - 1),
 		},
 		{
 			name:     "one hundred",
@@ -121,7 +121,7 @@ func TestAmountUnitConversions(t *testing.T) {
 	}{
 		{
 			name:      "MFLC",
-			amount:    MaxLoki,
+			amount:    Amount(500_000_000 * LokiPerFlokicoin),
 			unit:      AmountMegaFLC,
 			converted: 500,
 			s:         "500 MFLC",
