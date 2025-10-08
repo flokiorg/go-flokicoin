@@ -15,9 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"math/rand"
 	"net"
@@ -32,6 +30,7 @@ import (
 
 	"github.com/flokiorg/go-flokicoin/blockchain"
 	"github.com/flokiorg/go-flokicoin/blockchain/indexers"
+	"github.com/flokiorg/go-flokicoin/blockchain/stats"
 	"github.com/flokiorg/go-flokicoin/chaincfg"
 	"github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
 	"github.com/flokiorg/go-flokicoin/chainjson"
@@ -61,6 +60,10 @@ const (
 	// is closed.
 	rpcAuthTimeoutSeconds = 10
 
+	// rpcKeepAliveTimeoutSeconds matches Bitcoin Core's default keep-alive
+	// timeout so compatible clients see the same behavior.
+	rpcKeepAliveTimeoutSeconds = 30
+
 	// uint256Size is the number of bytes needed to represent an unsigned
 	// 256-bit integer.
 	uint256Size = 32
@@ -76,9 +79,9 @@ const (
 	// in the memory pool.
 	gbtRegenerateSeconds = 60
 
-    // maxProtocolVersion is the max protocol version the server supports.
-    // Align with the latest supported by the wire package.
-    maxProtocolVersion = wire.ProtocolVersion
+	// maxProtocolVersion is the max protocol version the server supports.
+	// Align with the latest supported by the wire package.
+	maxProtocolVersion = wire.ProtocolVersion
 
 	// defaultMaxFeeRate is the default value to use(0.1 FLC/kvB) when the
 	// `MaxFee` field is not set when calling `testmempoolaccept`.
@@ -172,7 +175,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getheaders":         handleGetHeaders,
 
 	"getinfo":         handleGetInfo,
-	"getnetworkinfo":  handleGetInfo,
+	"getnetworkinfo":  handleGetNetworkInfo,
 	"getindexinfo":    handleGetIndexInfo,
 	"getblockstats":   handleGetBlockStats,
 	"getmempoolentry": handleGetMempoolEntry,
@@ -574,8 +577,20 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 	// some validity checks.
 	params := s.cfg.ChainParams
 	for encodedAddr, amount := range c.Amounts {
-		// Ensure amount is in the valid range for monetary amounts.
-		if amount <= 0 || amount*chainutil.LokiPerFlokicoin > chainutil.MaxLoki {
+		// Ensure amount is positive and convertible to a valid number of loki.
+		if amount <= 0 {
+			return nil, &chainjson.RPCError{
+				Code:    chainjson.ErrRPCType,
+				Message: "Invalid amount",
+			}
+		}
+
+		lokiAmt, err := chainutil.NewAmount(amount)
+		if err != nil {
+			context := "Failed to convert amount"
+			return nil, internalRPCError(err.Error(), context)
+		}
+		if lokiAmt <= 0 || int64(lokiAmt) > chainutil.MaxLoki {
 			return nil, &chainjson.RPCError{
 				Code:    chainjson.ErrRPCType,
 				Message: "Invalid amount",
@@ -618,14 +633,7 @@ func handleCreateRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan 
 			return nil, internalRPCError(err.Error(), context)
 		}
 
-		// Convert the amount to loki.
-		loki, err := chainutil.NewAmount(amount)
-		if err != nil {
-			context := "Failed to convert amount"
-			return nil, internalRPCError(err.Error(), context)
-		}
-
-		txOut := wire.NewTxOut(int64(loki), pkScript)
+		txOut := wire.NewTxOut(int64(lokiAmt), pkScript)
 		mtx.AddTxOut(txOut)
 	}
 
@@ -2484,98 +2492,241 @@ func handleGetHeaders(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 	return hexBlockHeaders, nil
 }
 
+type networkInfoDetails struct {
+	snapshot             *chainjson.GetNetworkInfoResult
+	localServicesVerbose string
+}
+
+const defaultNetworkWarning = "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications"
+
+func rpcNumericVersion() int32 {
+	major := int(appMajor)
+	minor := int(appMinor)
+	patch := int(appPatch)
+	return int32(1000000*major + 10000*minor + 100*patch)
+}
+
+func rpcSubVersionString() string {
+	subVersion := fmt.Sprintf("flokicoind:%d.%d.%d-%s", appMajor, appMinor, appPatch, appPreRelease)
+	if appBuild != "" {
+		subVersion = fmt.Sprintf("%s+%s", subVersion, appBuild)
+	}
+	return fmt.Sprintf("/%s/", subVersion)
+}
+
+func deriveServiceInfo() (wire.ServiceFlag, string, string, []string) {
+	services := defaultServices
+	if cfg.NoPeerBloomFilters {
+		services &^= wire.SFNodeBloom
+	}
+	if cfg.NoCFilters {
+		services &^= wire.SFNodeCF
+	}
+	if cfg.Prune != 0 {
+		services &^= wire.SFNodeNetwork
+	}
+
+	pretty := services.String()
+	names := make([]string, 0)
+	if pretty != "" && pretty != "0x0" {
+		for _, part := range strings.Split(pretty, "|") {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				names = append(names, part)
+			}
+		}
+	}
+
+	hexStr := fmt.Sprintf("%016x", uint64(services))
+	return services, hexStr, pretty, names
+}
+
+func splitHostPortWithDefault(addr string, defaultPort int) (string, int) {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return "", defaultPort
+	}
+	host, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr, defaultPort
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return host, defaultPort
+	}
+	return host, port
+}
+
+func collectLocalAddresses(params *chaincfg.Params) []chainjson.LocalAddressesResult {
+	defaultPort, err := strconv.Atoi(params.DefaultPort)
+	if err != nil {
+		defaultPort = 0
+	}
+
+	addresses := make([]chainjson.LocalAddressesResult, 0, len(cfg.ExternalIPs)+len(cfg.Listeners))
+	seen := make(map[string]struct{})
+	add := func(host string, port int, score int32) {
+		if host == "" {
+			return
+		}
+		key := fmt.Sprintf("%s|%d", host, port)
+		if _, exists := seen[key]; exists {
+			return
+		}
+		seen[key] = struct{}{}
+		addresses = append(addresses, chainjson.LocalAddressesResult{
+			Address: host,
+			Port:    uint16(port),
+			Score:   score,
+		})
+	}
+
+	for _, raw := range cfg.ExternalIPs {
+		host, port := splitHostPortWithDefault(raw, defaultPort)
+		add(host, port, 0)
+	}
+
+	for _, raw := range cfg.Listeners {
+		host, port := splitHostPortWithDefault(raw, defaultPort)
+		if host == "" || host == "0.0.0.0" || host == "::" {
+			continue
+		}
+		add(host, port, 0)
+	}
+
+	sort.Slice(addresses, func(i, j int) bool {
+		if addresses[i].Address == addresses[j].Address {
+			return addresses[i].Port < addresses[j].Port
+		}
+		return addresses[i].Address < addresses[j].Address
+	})
+
+	return addresses
+}
+
+func buildNetworkEntries() []chainjson.NetworksResult {
+	reachable := !cfg.DisableListen
+	networks := []chainjson.NetworksResult{
+		{
+			Name:                      "ipv4",
+			Limited:                   false,
+			Reachable:                 reachable,
+			Proxy:                     cfg.Proxy,
+			ProxyRandomizeCredentials: cfg.TorIsolation,
+		},
+		{
+			Name:                      "ipv6",
+			Limited:                   false,
+			Reachable:                 reachable,
+			Proxy:                     cfg.Proxy,
+			ProxyRandomizeCredentials: cfg.TorIsolation,
+		},
+	}
+
+	onionProxy := cfg.OnionProxy
+	if onionProxy == "" {
+		onionProxy = cfg.Proxy
+	}
+	networks = append(networks, chainjson.NetworksResult{
+		Name:                      "onion",
+		Limited:                   cfg.NoOnion,
+		Reachable:                 !cfg.NoOnion,
+		Proxy:                     onionProxy,
+		ProxyRandomizeCredentials: cfg.TorIsolation,
+	})
+
+	return networks
+}
+
+func buildNetworkWarnings() chainjson.StringOrArray {
+	if defaultNetworkWarning == "" {
+		return nil
+	}
+	return chainjson.StringOrArray{defaultNetworkWarning}
+}
+
+func (s *rpcServer) networkInfoDetails() networkInfoDetails {
+	_, servicesHex, servicesPretty, serviceNames := deriveServiceInfo()
+
+	var inbound, outbound int32
+	for _, peer := range s.cfg.ConnMgr.ConnectedPeers() {
+		if peer.ToPeer().Inbound() {
+			inbound++
+		} else {
+			outbound++
+		}
+	}
+
+	return networkInfoDetails{
+		snapshot: &chainjson.GetNetworkInfoResult{
+			Version:            rpcNumericVersion(),
+			SubVersion:         rpcSubVersionString(),
+			ProtocolVersion:    int32(maxProtocolVersion),
+			LocalServices:      servicesHex,
+			LocalServicesNames: serviceNames,
+			LocalRelay:         !cfg.BlocksOnly,
+			TimeOffset:         int64(s.cfg.TimeSource.Offset() / time.Second),
+			Connections:        s.cfg.ConnMgr.ConnectedCount(),
+			ConnectionsIn:      inbound,
+			ConnectionsOut:     outbound,
+			NetworkActive:      true,
+			Networks:           buildNetworkEntries(),
+			RelayFee:           cfg.minRelayTxFee.ToFLC(),
+			IncrementalFee:     cfg.minRelayTxFee.ToFLC(),
+			LocalAddresses:     collectLocalAddresses(s.cfg.ChainParams),
+			Warnings:           buildNetworkWarnings(),
+		},
+		localServicesVerbose: servicesPretty,
+	}
+}
+
 // handleGetInfo implements the getinfo command. We only return the fields
 // that are not related to wallet functionality.
 func handleGetInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-    best := s.cfg.Chain.BestSnapshot()
-    subVersion := fmt.Sprintf("flokicoind:%d.%d.%d-%s", appMajor, appMinor, appPatch, appPreRelease)
-    if appBuild != "" {
-        subVersion = fmt.Sprintf("%s+%s", subVersion, appBuild)
-    }
-    // Derive local service flags similar to server initialization.
-    services := defaultServices
-    if cfg.NoPeerBloomFilters {
-        services &^= wire.SFNodeBloom
-    }
-    if cfg.NoCFilters {
-        services &^= wire.SFNodeCF
-    }
-    if cfg.Prune != 0 {
-        services &^= wire.SFNodeNetwork
-    }
+	best := s.cfg.Chain.BestSnapshot()
+	info := s.networkInfoDetails()
 
-    // Build LocalServices names list from the pretty-printed string.
-    // wire.ServiceFlag.String returns names separated by '|'.
-    svcStr := services.String()
-    svcNames := []string{}
-    if svcStr != "0x0" && svcStr != "" {
-        for _, part := range strings.Split(svcStr, "|") {
-            if part != "" {
-                svcNames = append(svcNames, part)
-            }
-        }
-    }
+	localAddrStrings := make([]string, len(info.snapshot.LocalAddresses))
+	for i, addr := range info.snapshot.LocalAddresses {
+		localAddrStrings[i] = net.JoinHostPort(addr.Address, strconv.Itoa(int(addr.Port)))
+	}
 
-    // Count inbound/outbound connections.
-    var inCount, outCount int32
-    for _, p := range s.cfg.ConnMgr.ConnectedPeers() {
-        if p.ToPeer().Inbound() {
-            inCount++
-        } else {
-            outCount++
-        }
-    }
+	warnings := []string(info.snapshot.Warnings)
+	if warnings == nil {
+		warnings = []string{}
+	}
 
-    // Collect known local addresses.
-    localAddrs := []string{}
-    for _, na := range s.cfg.ConnMgr.NodeAddresses() {
-        host := na.Addr.String()
-        port := strconv.Itoa(int(na.Port))
-        localAddrs = append(localAddrs, net.JoinHostPort(host, port))
-    }
+	ret := &chainjson.InfoChainResult{
+		Version:            info.snapshot.Version,
+		Subversion:         info.snapshot.SubVersion,
+		ProtocolVersion:    info.snapshot.ProtocolVersion,
+		Blocks:             best.Height,
+		TimeOffset:         info.snapshot.TimeOffset,
+		Connections:        info.snapshot.Connections,
+		Proxy:              cfg.Proxy,
+		Difficulty:         getDifficultyRatio(best.Bits, s.cfg.ChainParams),
+		TestNet:            s.cfg.ChainParams.Net != wire.MainNet,
+		RelayFee:           info.snapshot.RelayFee,
+		Errors:             "",
+		LocalServices:      info.localServicesVerbose,
+		LocalServicesNames: info.snapshot.LocalServicesNames,
+		LocalRelay:         info.snapshot.LocalRelay,
+		NetworkActive:      info.snapshot.NetworkActive,
+		ConnectionsIn:      info.snapshot.ConnectionsIn,
+		ConnectionsOut:     info.snapshot.ConnectionsOut,
+		Networks:           info.snapshot.Networks,
+		IncrementalFee:     info.snapshot.IncrementalFee,
+		LocalAddresses:     localAddrStrings,
+		Warnings:           warnings,
+	}
 
-    ret := &chainjson.InfoChainResult{
-        Version:         int32(1000000*appMajor + 10000*appMinor + 100*appPatch),
-        Subversion:      fmt.Sprintf("/%s/", subVersion),
-        ProtocolVersion: int32(maxProtocolVersion),
-        Blocks:          best.Height,
-        TimeOffset:      int64(s.cfg.TimeSource.Offset().Seconds()),
-        Connections:     s.cfg.ConnMgr.ConnectedCount(),
-        Proxy:           cfg.Proxy,
-        Difficulty:      getDifficultyRatio(best.Bits, s.cfg.ChainParams),
-        TestNet:         s.cfg.ChainParams.Net != wire.MainNet,
-        RelayFee:        cfg.minRelayTxFee.ToFLC(),
+	return ret, nil
+}
 
-        LocalServices:      svcStr,
-        LocalServicesNames: svcNames,
-        LocalRelay:         true,
-        NetworkActive:      true,
-        ConnectionsIn:      inCount,
-        ConnectionsOut:     outCount,
-        Networks: []chainjson.NetworksResult{
-            {
-                Name:                      "ipv4",
-                Limited:                   false,
-                Reachable:                 true,
-                Proxy:                     "",
-                ProxyRandomizeCredentials: false,
-            },
-            {
-                Name:                      "ipv6",
-                Limited:                   false,
-                Reachable:                 true,
-                Proxy:                     "",
-                ProxyRandomizeCredentials: false,
-            },
-        },
-        IncrementalFee: 0.00001000,
-        LocalAddresses: localAddrs,
-        Warnings: []string{
-            "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications",
-        },
-    }
-
-    return ret, nil
+// handleGetNetworkInfo implements the getnetworkinfo command.
+func handleGetNetworkInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	info := s.networkInfoDetails()
+	return info.snapshot, nil
 }
 
 // handleGetInfo implements the getinfo command. We only return the fields
@@ -2590,150 +2741,6 @@ func handleGetIndexInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 	}
 
 	return ret, nil
-}
-
-func calculateFee(tx *chainutil.Tx, chain *blockchain.BlockChain) int64 {
-	var inputSum, outputSum int64
-
-	for _, txIn := range tx.MsgTx().TxIn {
-		entry, err := chain.FetchUtxoEntry(txIn.PreviousOutPoint)
-		if err == nil || entry == nil || entry.IsSpent() {
-			continue // Skip spent or missing inputs
-		}
-		inputSum += entry.Amount()
-	}
-
-	for _, txOut := range tx.MsgTx().TxOut {
-		outputSum += txOut.Value
-	}
-
-	fee := inputSum - outputSum
-	if fee < 0 {
-		fee = 0 // Ensure no negative fees
-	}
-
-	return fee
-}
-
-func calculateTotalOutput(tx *chainutil.Tx) int64 {
-	var totalOut int64
-	for _, txOut := range tx.MsgTx().TxOut {
-		totalOut += txOut.Value
-	}
-	return totalOut
-}
-
-func median(values []int64) int64 {
-	if len(values) == 0 {
-		return 0
-	}
-	sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
-	n := len(values)
-	if n%2 == 0 {
-		return (values[n/2-1] + values[n/2]) / 2
-	}
-	return values[n/2]
-}
-
-func calculatePercentiles(values []int64) []int64 {
-	percentiles := []float64{10, 25, 50, 75, 90}
-	results := make([]int64, len(percentiles))
-
-	for i, p := range percentiles {
-		idx := int(float64(len(values)) * p / 100.0)
-		if idx >= len(values) {
-			idx = len(values) - 1
-		}
-		results[i] = values[idx]
-	}
-
-	return results
-}
-
-func calculateTotalInputs(block *chainutil.Block) int64 {
-	var totalInputs int64
-	for _, tx := range block.Transactions() {
-		totalInputs += int64(len(tx.MsgTx().TxIn))
-	}
-	return totalInputs
-}
-
-func calculateTotalOutputs(block *chainutil.Block) int64 {
-	var totalOutputs int64
-	for _, tx := range block.Transactions() {
-		totalOutputs += int64(len(tx.MsgTx().TxOut))
-	}
-	return totalOutputs
-}
-
-func calculateSegWitSize(block *chainutil.Block) int64 {
-	var totalSize int64
-	for _, tx := range block.Transactions() {
-		if tx.HasWitness() {
-			totalSize += int64(tx.MsgTx().SerializeSize())
-		}
-	}
-	return totalSize
-}
-
-func calculateSegWitWeight(block *chainutil.Block) int64 {
-	var totalWeight int64
-	for _, tx := range block.Transactions() {
-		if tx.HasWitness() {
-			totalWeight += blockchain.GetTransactionWeight(tx)
-		}
-	}
-	return totalWeight
-}
-
-func countSegWitTxs(block *chainutil.Block) int64 {
-	var count int64
-	for _, tx := range block.Transactions() {
-		if tx.HasWitness() {
-			count++
-		}
-	}
-	return count
-}
-
-func calculateUTXOIncrease(block *chainutil.Block, chain *blockchain.BlockChain) int64 {
-	var utxoIncrease int64
-
-	for _, tx := range block.Transactions() {
-		// Add outputs (new UTXOs)
-		utxoIncrease += int64(len(tx.MsgTx().TxOut))
-
-		// Subtract inputs (spent UTXOs)
-		for _, txIn := range tx.MsgTx().TxIn {
-			entry, err := chain.FetchUtxoEntry(txIn.PreviousOutPoint)
-			if err != nil && entry != nil && !entry.IsSpent() {
-				utxoIncrease--
-			}
-		}
-	}
-
-	return utxoIncrease
-}
-
-func calculateUTXOSizeIncrease(block *chainutil.Block, chain *blockchain.BlockChain) int64 {
-	var sizeIncrease int64
-
-	for _, tx := range block.Transactions() {
-		// Add size of new UTXOs
-		for _, txOut := range tx.MsgTx().TxOut {
-			sizeIncrease += int64(len(txOut.PkScript)) + 8 // 8 bytes for value
-		}
-
-		// Subtract size of spent UTXOs
-		for _, txIn := range tx.MsgTx().TxIn {
-			entry, err := chain.FetchUtxoEntry(txIn.PreviousOutPoint)
-			if err != nil && entry != nil && !entry.IsSpent() {
-				sizeIncrease -= int64(len(entry.PkScript())) + 8
-			}
-		}
-	}
-
-	return sizeIncrease
 }
 
 // handleGetBlockStats implements the getblockstats command. We only return the fields
@@ -2771,89 +2778,55 @@ func handleGetBlockStats(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 		return nil, err
 	}
 
-	// Calculate block statistics
-	var totalSize, totalWeight, totalFees, totalOut int64
-	var minFee, maxFee, minFeeRate, maxFeeRate int64
-	var minTxSize, maxTxSize int64 = math.MaxInt64, 0
-	feeRates := []int64{}
+	blockHeight := block.Height()
 
-	for _, tx := range block.Transactions() {
-		txSize := int64(tx.MsgTx().SerializeSize())
-		fee := calculateFee(tx, s.cfg.Chain) // A placeholder for actual fee calculation
-		feeRate := fee * 1000 / txSize       // lokis per kilobyte
-
-		totalFees += fee
-		totalOut += calculateTotalOutput(tx) // A placeholder for total output
-		totalSize += txSize
-		totalWeight += blockchain.GetTransactionWeight(tx)
-
-		// Track min/max fee and fee rate
-		if fee < minFee {
-			minFee = fee
-		}
-		if fee > maxFee {
-			maxFee = fee
-		}
-		if feeRate < minFeeRate {
-			minFeeRate = feeRate
-		}
-		if feeRate > maxFeeRate {
-			maxFeeRate = feeRate
-		}
-
-		// Track min/max transaction size
-		if txSize < minTxSize {
-			minTxSize = txSize
-		}
-		if txSize > maxTxSize {
-			maxTxSize = txSize
-		}
-
-		feeRates = append(feeRates, feeRate)
+	stxos, err := s.cfg.Chain.FetchSpendJournal(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching spend journal: %w", err)
 	}
 
-	// Calculate median values
-	sort.Slice(feeRates, func(i, j int) bool { return feeRates[i] < feeRates[j] })
-	medianFee := median(feeRates) // A placeholder for median calculation
+	blockStats, err := stats.ComputeBlockStats(block, stxos)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing block stats: %w", err)
+	}
 
 	medianTime, err := s.cfg.Chain.PastMedianTime(&header)
 	if err != nil {
 		return nil, fmt.Errorf("failed calculating block mediantime %w", err)
 	}
 
-	blockHeight := block.Height()
+	feeratePercentiles := blockStats.FeeRatePercentiles()
 
-	// Populate the result struct
 	ret := &chainjson.GetBlockStatsResult{
-		AverageFee:         totalFees / int64(len(block.Transactions())),
-		AverageFeeRate:     totalFees * 1000 / totalSize,
-		AverageTxSize:      totalSize / int64(len(block.Transactions())),
-		FeeratePercentiles: calculatePercentiles(feeRates), // Placeholder for percentile calculation
+		AverageFee:         blockStats.AverageFee(),
+		AverageFeeRate:     blockStats.AverageFeeRate(),
+		AverageTxSize:      blockStats.AverageTxSize(),
+		FeeratePercentiles: feeratePercentiles,
 		Hash:               blockHash.String(),
 		Height:             blockHeight,
-		Ins:                calculateTotalInputs(block), // Placeholder for input calculation
-		MaxFee:             maxFee,
-		MaxFeeRate:         maxFeeRate,
-		MaxTxSize:          maxTxSize,
-		MedianFee:          medianFee,
+		Ins:                blockStats.TotalInputs,
+		MaxFee:             blockStats.MaxFee,
+		MaxFeeRate:         blockStats.MaxFeeRate,
+		MaxTxSize:          blockStats.MaxTxSize,
+		MedianFee:          blockStats.MedianFee(),
 		MedianTime:         medianTime.Unix(),
-		MedianTxSize:       median(feeRates), // Replace with tx size if needed
-		MinFee:             minFee,
-		MinFeeRate:         minFeeRate,
-		MinTxSize:          minTxSize,
-		Outs:               calculateTotalOutputs(block),                                // Placeholder for output calculation
-		SegWitTotalSize:    calculateSegWitSize(block),                                  // Placeholder for SegWit size
-		SegWitTotalWeight:  calculateSegWitWeight(block),                                // Placeholder for SegWit weight
-		SegWitTxs:          countSegWitTxs(block),                                       // Placeholder for SegWit tx count
-		Subsidy:            blockchain.CalcBlockSubsidy(blockHeight, s.cfg.ChainParams), // Placeholder for subsidy calculation
+		MedianTxSize:       blockStats.MedianTxSize(),
+		MinFee:             blockStats.MinFee,
+		MinFeeRate:         blockStats.MinFeeRate,
+		MinTxSize:          blockStats.MinTxSize,
+		Outs:               blockStats.TotalOutputs,
+		SegWitTotalSize:    blockStats.SegWitTotalSize,
+		SegWitTotalWeight:  blockStats.SegWitTotalWeight,
+		SegWitTxs:          blockStats.SegWitTxs,
+		Subsidy:            blockchain.CalcBlockSubsidy(blockHeight, s.cfg.ChainParams),
 		Time:               header.Timestamp.Unix(),
-		TotalOut:           totalOut,
-		TotalSize:          totalSize,
-		TotalWeight:        totalWeight,
-		Txs:                int64(len(block.Transactions())),
-		TotalFee:           totalFees,                                     // Added totalFees field
-		UTXOIncrease:       calculateUTXOIncrease(block, s.cfg.Chain),     // Placeholder for UTXO increase
-		UTXOSizeIncrease:   calculateUTXOSizeIncrease(block, s.cfg.Chain), // Placeholder for UTXO size
+		TotalOut:           blockStats.TotalOutputValue,
+		TotalSize:          blockStats.TotalSize,
+		TotalWeight:        blockStats.TotalWeight,
+		Txs:                blockStats.TxCount,
+		TotalFee:           blockStats.TotalFees,
+		UTXOIncrease:       blockStats.UTXOIncrease,
+		UTXOSizeIncrease:   blockStats.UTXOSizeIncrease,
 	}
 
 	return ret, nil
@@ -3169,7 +3142,7 @@ func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan str
 
 	verbose := false
 	if c.Verbose != nil {
-		verbose = *c.Verbose != 0
+		verbose = *c.Verbose
 	}
 
 	// Try to fetch the transaction from the memory pool and if that fails,
@@ -4584,24 +4557,6 @@ func (s *rpcServer) httpStatusLine(req *http.Request, code int) string {
 	return line
 }
 
-// writeHTTPResponseHeaders writes the necessary response headers prior to
-// writing an HTTP body given a request to use for protocol negotiation, headers
-// to write, a status code, and a writer.
-func (s *rpcServer) writeHTTPResponseHeaders(req *http.Request, headers http.Header, code int, w io.Writer) error {
-	_, err := io.WriteString(w, s.httpStatusLine(req, code))
-	if err != nil {
-		return err
-	}
-
-	err = headers.Write(w)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.WriteString(w, "\r\n")
-	return err
-}
-
 // Stop is used by server.go to stop the rpc listener.
 func (s *rpcServer) Stop() error {
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
@@ -4887,41 +4842,12 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 		return
 	}
 
-	// Unfortunately, the http server doesn't provide the ability to
-	// change the read deadline for the new connection and having one breaks
-	// long polling.  However, not having a read deadline on the initial
-	// connection would mean clients can connect and idle forever.  Thus,
-	// hijack the connection from the HTTP server, clear the read deadline,
-	// and handle writing the response manually.
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		errMsg := "webserver doesn't support hijacking"
-		rpcsLog.Warnf(errMsg)
-		errCode := http.StatusInternalServerError
-		http.Error(w, strconv.Itoa(errCode)+" "+errMsg, errCode)
-		return
+	// Use the request context cancellation channel so long-polling handlers
+	// can detect when clients disconnect.
+	closeChan := r.Context().Done()
+	if closeChan == nil {
+		closeChan = make(chan struct{})
 	}
-	conn, buf, err := hj.Hijack()
-	if err != nil {
-		rpcsLog.Warnf("Failed to hijack HTTP connection: %v", err)
-		errCode := http.StatusInternalServerError
-		http.Error(w, strconv.Itoa(errCode)+" "+err.Error(), errCode)
-		return
-	}
-	defer conn.Close()
-	defer buf.Flush()
-	conn.SetReadDeadline(timeZeroVal)
-
-	// Attempt to parse the raw body into a JSON-RPC request.
-	// Setup a close notifier.  Since the connection is hijacked,
-	// the CloseNotifier on the ResponseWriter is not available.
-	closeChan := make(chan struct{}, 1)
-	go func() {
-		_, err = conn.Read(make([]byte, 1))
-		if err != nil {
-			close(closeChan)
-		}
-	}()
 
 	var results []json.RawMessage
 	var batchSize int
@@ -5095,20 +5021,17 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 		}
 	}
 
-	w.Header().Add("Content-Length", strconv.Itoa(len(msg)+1))
+	w.Header().Set("Content-Length", strconv.Itoa(len(msg)+1))
+	w.WriteHeader(http.StatusOK)
 
-	// Write the response.
-	err = s.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
-	if err != nil {
-		rpcsLog.Error(err)
-		return
-	}
-	if _, err := buf.Write(msg); err != nil {
-		rpcsLog.Errorf("Failed to write marshalled reply: %v", err)
+	if len(msg) > 0 {
+		if _, err := w.Write(msg); err != nil {
+			rpcsLog.Errorf("Failed to write marshalled reply: %v", err)
+		}
 	}
 
 	// Terminate with newline to maintain compatibility with Flokicoin.
-	if err := buf.WriteByte('\n'); err != nil {
+	if _, err := w.Write([]byte{'\n'}); err != nil {
 		rpcsLog.Errorf("Failed to append terminating newline to reply: %v", err)
 	}
 }
@@ -5130,14 +5053,16 @@ func (s *rpcServer) Start() {
 	httpServer := &http.Server{
 		Handler: rpcServeMux,
 
-		// Timeout connections which don't complete the initial
-		// handshake within the allowed timeframe.
+		// Timeout connections which don't complete the initial handshake within
+		// the allowed timeframe while still permitting HTTP keep-alive to match
+		// Bitcoin Core behavior.
 		ReadTimeout: time.Second * rpcAuthTimeoutSeconds,
+		IdleTimeout: time.Second * rpcKeepAliveTimeoutSeconds,
 	}
 	rpcServeMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Connection", "close")
 		w.Header().Set("Content-Type", "application/json")
-		r.Close = true
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Keep-Alive", fmt.Sprintf("timeout=%d", rpcKeepAliveTimeoutSeconds))
 
 		// Limit the number of connections to max allowed.
 		if s.limitConnections(w, r.RemoteAddr) {
