@@ -264,3 +264,39 @@ func TestGetNetworkInfoWarnings(t *testing.T) {
 		}
 	}
 }
+
+func TestStringOrArrayMarshal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		value    chainjson.StringOrArray
+		expected string
+	}{
+		{
+			name:     "empty slice returns empty string",
+			value:    chainjson.StringOrArray{},
+			expected: `""`,
+		},
+		{
+			name:     "single value marshals as string",
+			value:    chainjson.StringOrArray{"one"},
+			expected: `"one"`,
+		},
+		{
+			name:     "multiple values marshal as array",
+			value:    chainjson.StringOrArray{"one", "two"},
+			expected: `["one","two"]`,
+		},
+	}
+
+	for i, test := range tests {
+		marshalled, err := json.Marshal(test.value)
+		if err != nil {
+			t.Fatalf("Test #%d (%s) unexpected error: %v", i, test.name, err)
+		}
+		if string(marshalled) != test.expected {
+			t.Fatalf("Test #%d (%s) unexpected result: got %s want %s", i, test.name, marshalled, test.expected)
+		}
+	}
+}

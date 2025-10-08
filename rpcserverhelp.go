@@ -844,6 +844,29 @@ var helpDescsEnUS = map[string]string{
 	"infochainresult-localaddresses":     "An array of local addresses known to the node.",
 	"infochainresult-warnings":           "Any network or blockchain warnings related to the current state of the node.",
 
+	// GetNetworkInfoResult help.
+	"getnetworkinforesult-version":            "The version of the server.",
+	"getnetworkinforesult-subversion":         "The subversion string of the node.",
+	"getnetworkinforesult-protocolversion":    "The latest supported protocol version.",
+	"getnetworkinforesult-localservices":      "A hex-encoded bitmask of local services offered by the node.",
+	"getnetworkinforesult-localservicesnames": "Human-readable names of the local services offered by the node.",
+	"getnetworkinforesult-localrelay":         "Indicates if transaction relay is enabled.",
+	"getnetworkinforesult-timeoffset":         "The time offset of the node.",
+	"getnetworkinforesult-connections":        "The total number of connections.",
+	"getnetworkinforesult-connections_in":     "The number of inbound connections.",
+	"getnetworkinforesult-connections_out":    "The number of outbound connections.",
+	"getnetworkinforesult-networkactive":      "Whether P2P networking is enabled.",
+	"getnetworkinforesult-networks":           "Per-network connectivity information (ipv4, ipv6, onion, etc.).",
+	"getnetworkinforesult-relayfee":           "The minimum relay fee for transactions in FLC/KB.",
+	"getnetworkinforesult-incrementalfee":     "The incremental relay fee for transactions in FLC/KB.",
+	"getnetworkinforesult-localaddresses":     "Local addresses known to the node, including their reachability score.",
+	"getnetworkinforesult-warnings":           "Any network or blockchain warnings reported by the node.",
+
+	// LocalAddressesResult help.
+	"localaddressesresult-address": "The advertised local address.",
+	"localaddressesresult-port":    "The port associated with the local address.",
+	"localaddressesresult-score":   "The relative score indicating how suitable this address is for advertising.",
+
 	// GetMempoolEntryResult result help.
 	"getmempoolentryresult-vsize":           "The virtual transaction size in vBytes.",
 	"getmempoolentryresult-weight":          "The weight of the transaction.",
@@ -1018,7 +1041,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getheaders":         {(*[]string)(nil)},
 
 	"getinfo":         {(*chainjson.InfoChainResult)(nil)},
-	"getnetworkinfo":  {(*chainjson.InfoChainResult)(nil)},
+	"getnetworkinfo":  {(*chainjson.GetNetworkInfoResult)(nil)},
 	"getindexinfo":    {(*chainjson.IndexInfoResult)(nil)},
 	"getmempoolentry": {(*chainjson.GetMempoolEntryResult)(nil)},
 	"getblockstats":   {(*chainjson.GetBlockStatsResult)(nil)},
