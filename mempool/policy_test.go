@@ -223,33 +223,33 @@ func TestDust(t *testing.T) {
 			// Any value is allowed with a zero relay fee.
 			"zero value with zero relay fee",
 			wire.TxOut{Value: 0, PkScript: pkScript},
-			0,
+			chainutil.Amount(0),
 			false,
 		},
 		{
 			// Zero value is dust with any relay fee"
 			"zero value with very small tx fee",
 			wire.TxOut{Value: 0, PkScript: pkScript},
-			1,
+			chainutil.Amount(1),
 			true,
 		},
 		{
 			"38 byte public key script with value 584",
 			wire.TxOut{Value: 584, PkScript: pkScript},
-			1000,
+			chainutil.Amount(1000),
 			true,
 		},
 		{
 			"38 byte public key script with value 585",
 			wire.TxOut{Value: 585, PkScript: pkScript},
-			1000,
+			chainutil.Amount(1000),
 			false,
 		},
 		{
 			// Maximum allowed value is never dust.
 			"max loki amount is never dust",
 			wire.TxOut{Value: chainutil.MaxLoki, PkScript: pkScript},
-			chainutil.MaxLoki,
+			chainutil.Amount(chainutil.MaxLoki),
 			false,
 		},
 		// {
