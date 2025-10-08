@@ -259,7 +259,7 @@ func CheckTransactionSanity(tx *chainutil.Tx) error {
 		if loki > chainutil.MaxLoki {
 			str := fmt.Sprintf("transaction output value is "+
 				"higher than max allowed value: %v > %v ",
-				loki, chainutil.MaxLoki)
+				loki, int64(chainutil.MaxLoki))
 			return ruleError(ErrBadTxOutValue, str)
 		}
 
@@ -270,14 +270,14 @@ func CheckTransactionSanity(tx *chainutil.Tx) error {
 		if totalLoki < 0 {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs exceeds max allowed value of %v",
-				chainutil.MaxLoki)
+				int64(chainutil.MaxLoki))
 			return ruleError(ErrBadTxOutValue, str)
 		}
 		if totalLoki > chainutil.MaxLoki {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs is %v which is higher than max "+
 				"allowed value of %v", totalLoki,
-				chainutil.MaxLoki)
+				int64(chainutil.MaxLoki))
 			return ruleError(ErrBadTxOutValue, str)
 		}
 	}
@@ -1073,7 +1073,7 @@ func CheckTransactionInputs(tx *chainutil.Tx, txHeight int32, utxoView *UtxoView
 			str := fmt.Sprintf("transaction output value is "+
 				"higher than max allowed value: %v > %v ",
 				chainutil.Amount(originTxLoki),
-				chainutil.MaxLoki)
+				int64(chainutil.MaxLoki))
 			return 0, ruleError(ErrBadTxOutValue, str)
 		}
 
@@ -1087,7 +1087,7 @@ func CheckTransactionInputs(tx *chainutil.Tx, txHeight int32, utxoView *UtxoView
 			str := fmt.Sprintf("total value of all transaction "+
 				"inputs is %v which is higher than max "+
 				"allowed value of %v", totalLokiIn,
-				chainutil.MaxLoki)
+				int64(chainutil.MaxLoki))
 			return 0, ruleError(ErrBadTxOutValue, str)
 		}
 	}
