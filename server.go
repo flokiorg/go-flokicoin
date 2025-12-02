@@ -282,6 +282,12 @@ type serverPeer struct {
 	// The following chans are used to sync blockmanager and server.
 	txProcessed    chan struct{}
 	blockProcessed chan struct{}
+
+	// groupKey caches the outbound network group key for this peer so the
+	// peer handler can reliably adjust outbound group counters even if the
+	// connection drops before the peer finishes negotiation.
+	groupKey     string
+	groupCounted bool
 }
 
 // newServerPeer returns a new serverPeer instance. The peer needs to be set by
@@ -786,19 +792,17 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 		invMsg.AddInvVect(iv)
 	}
 
-	// Send the inventory message if there is anything to send.
-	if len(invMsg.InvList) > 0 {
-		invListLen := len(invMsg.InvList)
-		if invListLen == wire.MaxBlocksPerMsg {
-			// Intentionally use a copy of the final hash so there
-			// is not a reference into the inventory slice which
-			// would prevent the entire slice from being eligible
-			// for GC as soon as it's sent.
-			continueHash := invMsg.InvList[invListLen-1].Hash
-			sp.continueHash = &continueHash
-		}
-		sp.QueueMessage(invMsg, nil)
+	// Always send an inv response so peers waiting on a reply clear any stall
+	// timers even when we have no additional hashes to announce.
+	invListLen := len(invMsg.InvList)
+	if invListLen == wire.MaxBlocksPerMsg {
+		// Intentionally use a copy of the final hash so there is not
+		// a reference into the inventory slice which would prevent the
+		// entire slice from being eligible for GC as soon as it's sent.
+		continueHash := invMsg.InvList[invListLen-1].Hash
+		sp.continueHash = &continueHash
 	}
+	sp.QueueMessage(invMsg, nil)
 }
 
 // OnGetHeaders is invoked when a peer receives a getheaders flokicoin
@@ -1767,7 +1771,14 @@ func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	if sp.Inbound() {
 		state.inboundPeers[sp.ID()] = sp
 	} else {
-		state.outboundGroups[netaddr.GroupKey(sp.NA())]++
+		if na := sp.NA(); na != nil {
+			key := netaddr.GroupKey(na)
+			state.outboundGroups[key]++
+			sp.groupKey = key
+			sp.groupCounted = true
+		} else {
+			srvrLog.Debugf("Peer %s has no net address; skipping outbound group accounting", sp)
+		}
 		if sp.persistent {
 			state.persistentPeers[sp.ID()] = sp
 		} else {
@@ -1843,8 +1854,16 @@ func (s *server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 	}
 
 	if _, ok := list[sp.ID()]; ok {
-		if !sp.Inbound() && sp.VersionKnown() {
-			state.outboundGroups[netaddr.GroupKey(sp.NA())]--
+		if !sp.Inbound() && sp.groupCounted && sp.groupKey != "" {
+			if count, ok := state.outboundGroups[sp.groupKey]; ok {
+				if count <= 1 {
+					delete(state.outboundGroups, sp.groupKey)
+				} else {
+					state.outboundGroups[sp.groupKey] = count - 1
+				}
+			}
+			sp.groupCounted = false
+			sp.groupKey = ""
 		}
 		delete(list, sp.ID())
 		srvrLog.Debugf("Removed peer %s", sp)
