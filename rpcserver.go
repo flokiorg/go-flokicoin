@@ -1135,6 +1135,11 @@ func getDifficultyRatio(bits uint32, params *chaincfg.Params) float64 {
 func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*chainjson.GetBlockCmd)
 
+	verbosity := 1
+	if c.Verbosity != nil {
+		verbosity = *c.Verbosity
+	}
+
 	// Load the raw block bytes from the database.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
@@ -1153,8 +1158,14 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		}
 	}
 	// If verbosity is 0, return the serialized block as a hex encoded string.
-	if c.Verbosity != nil && *c.Verbosity == 0 {
+	if verbosity == 0 {
 		return hex.EncodeToString(blkBytes), nil
+	}
+	if verbosity < 0 || verbosity > 2 {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCInvalidParameter,
+			Message: "Verbosity must be 0, 1 or 2",
+		}
 	}
 
 	// Otherwise, generate the JSON object and return it.
@@ -1193,40 +1204,31 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	}
 
 	params := s.cfg.ChainParams
-	blockHeader := &blk.MsgBlock().Header
-	blockReply := chainjson.GetBlockVerboseResult{
-		Hash:          c.Hash,
-		Version:       blockHeader.Version,
-		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version),
-		MerkleRoot:    blockHeader.MerkleRoot.String(),
-		PreviousHash:  blockHeader.PrevBlock.String(),
-		Nonce:         blockHeader.Nonce,
-		Time:          blockHeader.Timestamp.Unix(),
-		Confirmations: int64(1 + best.Height - blockHeight),
-		Height:        int64(blockHeight),
-		Size:          int32(len(blkBytes)),
-		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:        int32(blockchain.GetBlockWeight(blk)),
-		Bits:          strconv.FormatInt(int64(blockHeader.Bits), 16),
-		Difficulty:    getDifficultyRatio(blockHeader.Bits, params),
-		NextHash:      nextHashString,
-		ChainWork:     fmt.Sprintf("%064x", chainWork),
-	}
+	msgBlock := blk.MsgBlock()
+	blockHeader := &msgBlock.Header
+	strippedSize := int32(msgBlock.SerializeSizeStripped())
+	blockSize := int32(len(blkBytes))
+	blockWeight := int32(blockchain.GetBlockWeight(blk))
+	confirmations := int64(1 + best.Height - blockHeight)
+	bits := strconv.FormatInt(int64(blockHeader.Bits), 16)
+	difficulty := getDifficultyRatio(blockHeader.Bits, params)
+	chainWorkStr := fmt.Sprintf("%064x", chainWork)
+	versionHex := fmt.Sprintf("%08x", blockHeader.Version)
+	prevHash := blockHeader.PrevBlock.String()
+	timeStamp := blockHeader.Timestamp.Unix()
+	nonce := blockHeader.Nonce
 
-	// Populate AuxPow as structured object if present.
+	var auxPow *chainjson.AuxPowResult
 	if blockHeader.AuxPowHeader != nil {
 		aph := blockHeader.AuxPowHeader
 
-		// tx hex and txid
 		var txBuf bytes.Buffer
 		_ = aph.CoinbaseTx.Serialize(&txBuf)
 		txHex := hex.EncodeToString(txBuf.Bytes())
 		txid := aph.CoinbaseTx.TxHash().String()
 
-		// vin: coinbase script
 		vin := []chainjson.AuxPowVin{{Coinbase: hex.EncodeToString(aph.CoinbaseTx.TxIn[0].SignatureScript)}}
 
-		// vout: value + scriptPubKey hex
 		vout := make([]chainjson.AuxPowVout, len(aph.CoinbaseTx.TxOut))
 		for i, o := range aph.CoinbaseTx.TxOut {
 			vout[i] = chainjson.AuxPowVout{
@@ -1235,22 +1237,21 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 			}
 		}
 
-		// branches
 		merkleBranch := make([]string, len(aph.CoinbaseBranch.Hashes))
 		for i := range aph.CoinbaseBranch.Hashes {
 			merkleBranch[i] = aph.CoinbaseBranch.Hashes[i].String()
 		}
+
 		chainMerkleBranch := make([]string, len(aph.BlockChainBranch.Hashes))
 		for i := range aph.BlockChainBranch.Hashes {
 			chainMerkleBranch[i] = aph.BlockChainBranch.Hashes[i].String()
 		}
 
-		// parent block header hex
 		var ph bytes.Buffer
 		_ = aph.ParentBlockHeader.Serialize(&ph)
 		parentHex := hex.EncodeToString(ph.Bytes())
 
-		blockReply.AuxPow = &chainjson.AuxPowResult{
+		auxPow = &chainjson.AuxPowResult{
 			Tx: chainjson.AuxPowTxResult{
 				Hex:      txHex,
 				Txid:     txid,
@@ -1267,32 +1268,70 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		}
 	}
 
-	if *c.Verbosity == 1 {
-		transactions := blk.Transactions()
-		txNames := make([]string, len(transactions))
-		for i, tx := range transactions {
+	txns := blk.Transactions()
+	ntx := len(txns)
+
+	if verbosity == 1 {
+		txNames := make([]string, ntx)
+		for i, tx := range txns {
 			txNames[i] = tx.Hash().String()
 		}
 
-		blockReply.Tx = txNames
-		blockReply.NTx = len(txNames)
-	} else {
-		txns := blk.Transactions()
-		rawTxns := make([]chainjson.TxRawResult, len(txns))
-		for i, tx := range txns {
-			rawTxn, err := createTxRawResult(params, tx.MsgTx(),
-				tx.Hash().String(), blockHeader, hash.String(),
-				blockHeight, best.Height)
-			if err != nil {
-				return nil, err
-			}
-			rawTxns[i] = *rawTxn
-		}
-		blockReply.RawTx = rawTxns
-		blockReply.NTx = len(rawTxns)
+		return chainjson.GetBlockVerboseResult{
+			Hash:          c.Hash,
+			Version:       blockHeader.Version,
+			VersionHex:    versionHex,
+			MerkleRoot:    blockHeader.MerkleRoot.String(),
+			PreviousHash:  prevHash,
+			Nonce:         nonce,
+			Time:          timeStamp,
+			Confirmations: confirmations,
+			Height:        int64(blockHeight),
+			Size:          blockSize,
+			StrippedSize:  strippedSize,
+			Weight:        blockWeight,
+			Bits:          bits,
+			Difficulty:    difficulty,
+			NextHash:      nextHashString,
+			ChainWork:     chainWorkStr,
+			AuxPow:        auxPow,
+			Tx:            txNames,
+			NTx:           ntx,
+		}, nil
 	}
 
-	return blockReply, nil
+	rawTxns := make([]chainjson.TxRawResult, ntx)
+	for i, tx := range txns {
+		rawTxn, err := createTxRawResult(params, tx.MsgTx(),
+			tx.Hash().String(), blockHeader, hash.String(),
+			blockHeight, best.Height)
+		if err != nil {
+			return nil, err
+		}
+		rawTxns[i] = *rawTxn
+	}
+
+	return chainjson.GetBlockVerboseTxResult{
+		Hash:          c.Hash,
+		Version:       blockHeader.Version,
+		VersionHex:    versionHex,
+		MerkleRoot:    blockHeader.MerkleRoot.String(),
+		PreviousHash:  prevHash,
+		Nonce:         nonce,
+		Time:          timeStamp,
+		Confirmations: confirmations,
+		Height:        int64(blockHeight),
+		Size:          blockSize,
+		StrippedSize:  strippedSize,
+		Weight:        blockWeight,
+		Bits:          bits,
+		Difficulty:    difficulty,
+		NextHash:      nextHashString,
+		ChainWork:     chainWorkStr,
+		AuxPow:        auxPow,
+		Tx:            rawTxns,
+		NTx:           ntx,
+	}, nil
 }
 
 // softForkStatus converts a ThresholdState state into a human readable string
@@ -1321,7 +1360,24 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	params := s.cfg.ChainParams
 	chain := s.cfg.Chain
 	chainSnapshot := chain.BestSnapshot()
-	// _, bestHeaderHeight := chain.BestHeader()
+
+	// Determine the best known header height across connected peers to
+	// provide a meaningful verification progress metric.
+	bestHeaderHeight := chainSnapshot.Height
+	if connMgr := s.cfg.ConnMgr; connMgr != nil {
+		for _, p := range connMgr.ConnectedPeers() {
+			if p == nil {
+				continue
+			}
+			peer := p.ToPeer()
+			if peer == nil {
+				continue
+			}
+			if peerHeight := peer.LastBlock(); peerHeight > bestHeaderHeight {
+				bestHeaderHeight = peerHeight
+			}
+		}
+	}
 
 	// Fetch the current chain work using the best block hash.
 	chainWork, err := chain.ChainWork(&chainSnapshot.Hash)
@@ -1330,21 +1386,25 @@ func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	}
 
 	// Estimate the verification progress of the node.
-	var verifyProgress float64 = 1
-	// if bestHeaderHeight > 0 {
-	// 	progress := float64(chainSnapshot.Height) / float64(bestHeaderHeight)
-	// 	verifyProgress = math.Min(progress, 1.0)
-	// }
+	var verifyProgress float64
+	if bestHeaderHeight > 0 {
+		verifyProgress = float64(chainSnapshot.Height) / float64(bestHeaderHeight)
+		if verifyProgress > 1 {
+			verifyProgress = 1
+		} else if verifyProgress < 0 {
+			verifyProgress = 0
+		}
+	}
 
 	var ibdFlag bool = false
-	// if params.Net == wire.MainNet {
-	// 	ibdFlag = !chain.IsCurrent()
-	// }
+	if params.Net == wire.MainNet {
+		ibdFlag = !chain.IsCurrent()
+	}
 
 	chainInfo := &chainjson.GetBlockChainInfoResult{
 		Chain:         params.Name,
 		Blocks:        chainSnapshot.Height,
-		Headers:       chainSnapshot.Height,
+		Headers:       bestHeaderHeight,
 		BestBlockHash: chainSnapshot.Hash.String(),
 		Difficulty:    getDifficultyRatio(chainSnapshot.Bits, params),
 		MedianTime:    chainSnapshot.MedianTime.Unix(),
@@ -5335,7 +5395,7 @@ func newRPCServer(config *rpcserverConfig) (*rpcServer, error) {
 	rpc.ntfnMgr = newWsNotificationManager(&rpc)
 	rpc.cfg.Chain.Subscribe(rpc.handleBlockchainNotification)
 
-	rpc.cfg.AuxCache = newAuxCache(2 * time.Minute)
+	rpc.cfg.AuxCache = newAuxCache(30 * time.Minute)
 
 	return &rpc, nil
 }
@@ -5513,7 +5573,8 @@ func handleCreateAuxBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct
 	}
 
 	template := state.template
-	block := template.Block
+	block := template.Block.Copy()
+	blockHeight := int32(template.Height)
 
 	// Check time sanity
 	adjusted := state.timeSource.AdjustedTime()
@@ -5536,7 +5597,7 @@ func handleCreateAuxBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct
 
 	coinbaseTx := block.Transactions[0]
 	coinbaseTx.TxOut[0].PkScript = pkScript
-	template.ValidPayAddress = true
+	// template.ValidPayAddress = true
 
 	// Update the merkle root.
 
@@ -5551,7 +5612,7 @@ func handleCreateAuxBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct
 	*clone = *block
 	cand := &AuxCandidate{
 		Hash:   block.BlockHash(),
-		Height: int32(template.Height),
+		Height: blockHeight,
 		Block:  clone,
 	}
 

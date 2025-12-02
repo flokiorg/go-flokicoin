@@ -85,7 +85,6 @@ type GetBlockVerboseResult struct {
 	VersionHex    string        `json:"versionHex"`
 	MerkleRoot    string        `json:"merkleroot"`
 	Tx            []string      `json:"tx,omitempty"`
-	RawTx         []TxRawResult `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
 	Time          int64         `json:"time"`
 	Nonce         uint32        `json:"nonce"`
 	Bits          string        `json:"bits"`
@@ -142,13 +141,15 @@ type GetBlockVerboseTxResult struct {
 	VersionHex    string        `json:"versionHex"`
 	MerkleRoot    string        `json:"merkleroot"`
 	Tx            []TxRawResult `json:"tx,omitempty"`
-	RawTx         []TxRawResult `json:"rawtx,omitempty"`
 	Time          int64         `json:"time"`
 	Nonce         uint32        `json:"nonce"`
 	Bits          string        `json:"bits"`
 	Difficulty    float64       `json:"difficulty"`
 	PreviousHash  string        `json:"previousblockhash"`
 	NextHash      string        `json:"nextblockhash,omitempty"`
+	NTx           int           `json:"nTx"`
+	ChainWork     string        `json:"chainwork"`
+	AuxPow        *AuxPowResult `json:"auxpow,omitempty"`
 }
 
 // GetChainTipsResult models the data from the getchaintips command.
