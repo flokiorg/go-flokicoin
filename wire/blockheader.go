@@ -187,7 +187,7 @@ func (h *BlockHeader) Serialize(w io.Writer) error {
 
 	if h.AuxPow() {
 		if h.AuxPowHeader == nil {
-			return fmt.Errorf("auxpow header is nil for auxpow block header: hash2: %s (version: %x)", h.BlockHash(), h.Version)
+			return fmt.Errorf("auxpow header is nil for auxpow block header: hash: %s (version: %x)", h.BlockHash(), h.Version)
 		}
 		if err := h.AuxPowHeader.Serialize(w); err != nil {
 			return err
@@ -201,14 +201,14 @@ func (h *BlockHeader) Serialize(w io.Writer) error {
 // (Version, PrevBlock, MerkleRoot, Timestamp, Bits, Nonce) and does not
 // include any AuxPoW payload regardless of the AuxPoW version bit.
 func (h *BlockHeader) SerializeHeader(w io.Writer) error {
-    return writeBlockHeader(w, 0, h)
+	return writeBlockHeader(w, 0, h)
 }
 
 // DeserializeHeader decodes only the 80-byte base block header fields from r
 // into the receiver (Version, PrevBlock, MerkleRoot, Timestamp, Bits, Nonce)
 // and ignores any AuxPoW payload regardless of the AuxPoW version bit.
 func (h *BlockHeader) DeserializeHeader(r io.Reader) error {
-    return readBlockHeader(r, 0, h)
+	return readBlockHeader(r, 0, h)
 }
 
 // NewBlockHeader returns a new BlockHeader using the provided version, previous

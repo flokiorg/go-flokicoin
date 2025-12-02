@@ -6,11 +6,11 @@
 package wire
 
 import (
-    "bytes"
-    "fmt"
-    "io"
+	"bytes"
+	"fmt"
+	"io"
 
-    "github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
+	"github.com/flokiorg/go-flokicoin/chaincfg/chainhash"
 )
 
 // defaultTransactionAlloc is the default size used for the backing array
@@ -77,16 +77,18 @@ func (msg *MsgBlock) ClearTransactions() {
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
 func (msg *MsgBlock) FlcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
-    // Decode full header including AuxPoW payload (if any).
-    if err := msg.Header.FlcDecode(r, pver, enc); err != nil {
-        return err
-    }
-    buf := binarySerializer.Borrow()
-    defer binarySerializer.Return(buf)
-    txCount, err := ReadVarIntBuf(r, pver, buf)
-    if err != nil {
-        return err
-    }
+	// Decode header (wire format)
+	if err := msg.Header.FlcDecode(r, pver, enc); err != nil {
+		return err
+	}
+
+	buf := binarySerializer.Borrow()
+	defer binarySerializer.Return(buf)
+
+	txCount, err := ReadVarIntBuf(r, pver, buf)
+	if err != nil {
+		return err
+	}
 
 	// Prevent more transactions than could possibly fit into a block.
 	// It would be possible to cause memory exhaustion and panics without
@@ -131,7 +133,7 @@ func (msg *MsgBlock) Deserialize(r io.Reader) error {
 	// MessageEncoding parameter indicates that the transactions within the
 	// block are expected to be serialized according to the new
 	// serialization structure defined in BIP0141.
-    return msg.FlcDecode(r, 0, WitnessEncoding)
+	return msg.FlcDecode(r, 0, WitnessEncoding)
 }
 
 // FromBytes deserializes a transaction byte slice.
@@ -147,22 +149,63 @@ func (msg *MsgBlock) DeserializeNoWitness(r io.Reader) error {
 	return msg.FlcDecode(r, 0, BaseEncoding)
 }
 
+// decodeTxs is a shared helper that reads the transaction count and decodes
+// all transactions. If trackLocs is true, it also returns per-transaction
+// locations (requires r to be *bytes.Buffer).
+func (msg *MsgBlock) DecodeTransactions(r io.Reader, pver uint32, enc MessageEncoding) error {
+
+	buf := binarySerializer.Borrow()
+	defer binarySerializer.Return(buf)
+
+	txCount, err := ReadVarIntBuf(r, pver, buf)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more transactions than could possibly fit into a block.
+	// It would be possible to cause memory exhaustion and panics without
+	// a sane upper bound on this count.
+	if txCount > maxTxPerBlock {
+		str := fmt.Sprintf("too many transactions to fit into a block "+
+			"[count %d, max %d]", txCount, maxTxPerBlock)
+		return messageError("MsgBlock.FlcDecode", str)
+	}
+
+	scriptBuf := scriptPool.Borrow()
+	defer scriptPool.Return(scriptBuf)
+
+	msg.Transactions = make([]*MsgTx, 0, txCount)
+	for i := uint64(0); i < txCount; i++ {
+		tx := MsgTx{}
+		err := tx.flcDecode(r, pver, enc, buf, scriptBuf[:])
+		if err != nil {
+			return err
+		}
+		msg.Transactions = append(msg.Transactions, &tx)
+	}
+
+	return nil
+}
+
 // DeserializeTxLoc decodes r in the same manner Deserialize does, but it takes
 // a byte buffer instead of a generic reader and returns a slice containing the
 // start and length of each transaction within the raw data that is being
 // deserialized.
 func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
-    fullLen := r.Len()
-    // Read full header including AuxPoW (if any) to advance buffer correctly.
-    if err := msg.Header.Deserialize(r); err != nil {
-        return nil, err
-    }
-    buf := binarySerializer.Borrow()
-    defer binarySerializer.Return(buf)
-    txCount, err := ReadVarIntBuf(r, 0, buf)
-    if err != nil {
-        return nil, err
-    }
+	fullLen := r.Len()
+
+	// Decode header (disk format)
+	if err := msg.Header.Deserialize(r); err != nil {
+		return nil, err
+	}
+
+	buf := binarySerializer.Borrow()
+	defer binarySerializer.Return(buf)
+
+	txCount, err := ReadVarIntBuf(r, 0, buf)
+	if err != nil {
+		return nil, err
+	}
 
 	// Prevent more transactions than could possibly fit into a block.
 	// It would be possible to cause memory exhaustion and panics without
@@ -199,16 +242,16 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
 func (msg *MsgBlock) FlcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
-    // Encode full header including AuxPoW payload (if any).
-    if err := msg.Header.FlcEncode(w, pver, enc); err != nil {
-        return err
-    }
-    buf := binarySerializer.Borrow()
-    defer binarySerializer.Return(buf)
-    err := WriteVarIntBuf(w, pver, uint64(len(msg.Transactions)), buf)
-    if err != nil {
-        return err
-    }
+	// Encode full header including AuxPoW payload (if any).
+	if err := msg.Header.FlcEncode(w, pver, enc); err != nil {
+		return err
+	}
+	buf := binarySerializer.Borrow()
+	defer binarySerializer.Return(buf)
+	err := WriteVarIntBuf(w, pver, uint64(len(msg.Transactions)), buf)
+	if err != nil {
+		return err
+	}
 
 	for _, tx := range msg.Transactions {
 		err = tx.flcEncode(w, pver, enc, buf)
@@ -237,7 +280,7 @@ func (msg *MsgBlock) Serialize(w io.Writer) error {
 	// Passing WitnessEncoding as the encoding type here indicates that
 	// each of the transactions should be serialized using the witness
 	// serialization structure defined in BIP0141.
-    return msg.FlcEncode(w, 0, WitnessEncoding)
+	return msg.FlcEncode(w, 0, WitnessEncoding)
 }
 
 // Bytes returns the serialized form of the block in bytes.
@@ -262,15 +305,15 @@ func (msg *MsgBlock) SerializeNoWitness(w io.Writer) error {
 // SerializeSize returns the number of bytes it would take to serialize the
 // block, factoring in any witness data within transaction.
 func (msg *MsgBlock) SerializeSize() int {
-    // Header bytes (including AuxPoW if present) + varint count + txs.
-    headerSize := BlockHeaderLen
-    if msg.Header.AuxPow() {
-        // Compute serialized size dynamically when AuxPoW is present.
-        var hb bytes.Buffer
-        _ = msg.Header.Serialize(&hb)
-        headerSize = hb.Len()
-    }
-    n := headerSize + VarIntSerializeSize(uint64(len(msg.Transactions)))
+	// Header bytes (including AuxPoW if present) + varint count + txs.
+	headerSize := BlockHeaderLen
+	if msg.Header.AuxPow() {
+		// Compute serialized size dynamically when AuxPoW is present.
+		var hb bytes.Buffer
+		_ = msg.Header.Serialize(&hb)
+		headerSize = hb.Len()
+	}
+	n := headerSize + VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSize()
@@ -282,13 +325,13 @@ func (msg *MsgBlock) SerializeSize() int {
 // SerializeSizeStripped returns the number of bytes it would take to serialize
 // the block, excluding any witness data (if any).
 func (msg *MsgBlock) SerializeSizeStripped() int {
-    headerSize := BlockHeaderLen
-    if msg.Header.AuxPow() {
-        var hb bytes.Buffer
-        _ = msg.Header.Serialize(&hb)
-        headerSize = hb.Len()
-    }
-    n := headerSize + VarIntSerializeSize(uint64(len(msg.Transactions)))
+	headerSize := BlockHeaderLen
+	if msg.Header.AuxPow() {
+		var hb bytes.Buffer
+		_ = msg.Header.Serialize(&hb)
+		headerSize = hb.Len()
+	}
+	n := headerSize + VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSizeStripped()
