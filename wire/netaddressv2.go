@@ -25,10 +25,10 @@ var (
 	ErrInvalidAddressSize = fmt.Errorf("invalid address size")
 
 	// ErrSkippedNetworkID is returned when the cjdns, i2p, or unknown
-	// networks are encountered during decoding. flokicoind does not support i2p
+	// networks are encountered during decoding. lokid does not support i2p
 	// or cjdns addresses. In the case of an unknown networkID, this is so
 	// that a future BIP reserving a new networkID does not cause older
-	// addrv2-supporting flokicoind software to disconnect upon receiving the new
+	// addrv2-supporting lokid software to disconnect upon receiving the new
 	// addresses. This error can also be returned when an OnionCat-encoded
 	// torv2 address is received with the ipv6 networkID. This error
 	// signals to the caller to continue reading.
@@ -370,7 +370,7 @@ func readNetAddressV2(r io.Reader, pver uint32, na *NetAddressV2) error {
 		}
 
 		// BIP-155 does not specify to validate the public key here.
-		// flokicoind does not validate the ed25519 pubkey.
+		// lokid does not validate the ed25519 pubkey.
 		na.Addr = addr
 	case i2p:
 		addr := &i2pAddr{}

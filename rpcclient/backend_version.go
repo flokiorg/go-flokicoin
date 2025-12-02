@@ -21,48 +21,48 @@ type BackendVersion interface {
 	SupportGetTxSpendingPrevOut() bool
 }
 
-// BitcoindVersion represents the version of the flokicoind the client is
+// BitcoindVersion represents the version of the lokid the client is
 // currently connected to.
 type BitcoindVersion uint8
 
 const (
-	// FlokicoindPre19 represents a flokicoind version before 0.19.0.
-	FlokicoindPre19 BitcoindVersion = iota
+	// LokidPre19 represents a lokid version before 0.19.0.
+	LokidPre19 BitcoindVersion = iota
 
-	// BitcoindPre22 represents a flokicoind version equal to or greater than
+	// BitcoindPre22 represents a lokid version equal to or greater than
 	// 0.19.0 and smaller than 22.0.0.
-	FlokicoindPre22
+	LokidPre22
 
-	// BitcoindPre24 represents a flokicoind version equal to or greater than
+	// BitcoindPre24 represents a lokid version equal to or greater than
 	// 22.0.0 and smaller than 24.0.0.
-	FlokicoindPre24
+	LokidPre24
 
-	// BitcoindPre25 represents a flokicoind version equal to or greater than
+	// BitcoindPre25 represents a lokid version equal to or greater than
 	// 24.0.0 and smaller than 25.0.0.
-	FlokicoindPre25
+	LokidPre25
 
-	// BitcoindPre25 represents a flokicoind version equal to or greater than
+	// BitcoindPre25 represents a lokid version equal to or greater than
 	// 25.0.0.
-	FlokicoindPost25
+	LokidPost25
 )
 
 // String returns a human-readable backend version.
 func (b BitcoindVersion) String() string {
 	switch b {
-	case FlokicoindPre19:
-		return "flokicoind 0.19 and below"
+	case LokidPre19:
+		return "lokid 0.19 and below"
 
-	case FlokicoindPre22:
-		return "flokicoind v0.19.0-v22.0.0"
+	case LokidPre22:
+		return "lokid v0.19.0-v22.0.0"
 
-	case FlokicoindPre24:
-		return "flokicoind v22.0.0-v24.0.0"
+	case LokidPre24:
+		return "lokid v22.0.0-v24.0.0"
 
-	case FlokicoindPre25:
-		return "flokicoind v24.0.0-v25.0.0"
+	case LokidPre25:
+		return "lokid v24.0.0-v25.0.0"
 
-	case FlokicoindPost25:
-		return "flokicoind v25.0.0 and above"
+	case LokidPost25:
+		return "lokid v25.0.0 and above"
 
 	default:
 		return "unknown"
@@ -73,19 +73,19 @@ func (b BitcoindVersion) String() string {
 // softforks format.
 func (b BitcoindVersion) SupportUnifiedSoftForks() bool {
 	// Versions of bitcoind on or after v0.19.0 use the unified format.
-	return b > FlokicoindPre19
+	return b > LokidPre19
 }
 
 // SupportTestMempoolAccept returns true if bitcoind version is 22.0.0 or
 // above.
 func (b BitcoindVersion) SupportTestMempoolAccept() bool {
-	return b > FlokicoindPre22
+	return b > LokidPre22
 }
 
 // SupportGetTxSpendingPrevOut returns true if bitcoind version is 24.0.0 or
 // above.
 func (b BitcoindVersion) SupportGetTxSpendingPrevOut() bool {
-	return b > FlokicoindPre24
+	return b > LokidPre24
 }
 
 // Compile-time checks to ensure that BitcoindVersion satisfy the
@@ -125,44 +125,44 @@ func parseBitcoindVersion(version string) BitcoindVersion {
 	)
 	switch {
 	case version < bitcoind19Str:
-		return FlokicoindPre19
+		return LokidPre19
 
 	case version < bitcoind22Str:
-		return FlokicoindPre22
+		return LokidPre22
 
 	case version < bitcoind24Str:
-		return FlokicoindPre24
+		return LokidPre24
 
 	case version < bitcoind25Str:
-		return FlokicoindPre25
+		return LokidPre25
 
 	default:
-		return FlokicoindPost25
+		return LokidPost25
 	}
 }
 
-// FlokicoindVersion represents the version of the flokicoind the client is currently
+// LokidVersion represents the version of the lokid the client is currently
 // connected to.
-type FlokicoindVersion int32
+type LokidVersion int32
 
 const (
-	// FlokicoindPre2401 describes a flokicoind version before 0.24.1, which doesn't
+	// LokidPre2401 describes a lokid version before 0.24.1, which doesn't
 	// include the `testmempoolaccept` and `gettxspendingprevout` RPCs.
-	FlokicoindPre2401 FlokicoindVersion = iota
+	LokidPre2401 LokidVersion = iota
 
-	// FlokicoindPost2401 describes a flokicoind version equal to or greater than
+	// LokidPost2401 describes a lokid version equal to or greater than
 	// 0.24.1.
-	FlokicoindPost2401
+	LokidPost2401
 )
 
 // String returns a human-readable backend version.
-func (b FlokicoindVersion) String() string {
+func (b LokidVersion) String() string {
 	switch b {
-	case FlokicoindPre2401:
-		return "flokicoind 24.0.0 and below"
+	case LokidPre2401:
+		return "lokid 24.0.0 and below"
 
-	case FlokicoindPost2401:
-		return "flokicoind 24.1.0 and above"
+	case LokidPost2401:
+		return "lokid 24.1.0 and above"
 
 	default:
 		return "unknown"
@@ -172,37 +172,37 @@ func (b FlokicoindVersion) String() string {
 // SupportUnifiedSoftForks returns true if the backend supports the unified
 // softforks format.
 //
-// NOTE: always true for flokicoind as we didn't track it before.
-func (b FlokicoindVersion) SupportUnifiedSoftForks() bool {
+// NOTE: always true for lokid as we didn't track it before.
+func (b LokidVersion) SupportUnifiedSoftForks() bool {
 	return true
 }
 
-// SupportTestMempoolAccept returns true if flokicoind version is 24.1.0 or above.
-func (b FlokicoindVersion) SupportTestMempoolAccept() bool {
-	return b > FlokicoindPre2401
+// SupportTestMempoolAccept returns true if lokid version is 24.1.0 or above.
+func (b LokidVersion) SupportTestMempoolAccept() bool {
+	return b > LokidPre2401
 }
 
-// SupportGetTxSpendingPrevOut returns true if flokicoind version is 24.1.0 or above.
-func (b FlokicoindVersion) SupportGetTxSpendingPrevOut() bool {
-	return b > FlokicoindPre2401
+// SupportGetTxSpendingPrevOut returns true if lokid version is 24.1.0 or above.
+func (b LokidVersion) SupportGetTxSpendingPrevOut() bool {
+	return b > LokidPre2401
 }
 
-// Compile-time checks to ensure that FlokicoindVersion satisfy the BackendVersion
+// Compile-time checks to ensure that LokidVersion satisfy the BackendVersion
 // interface.
-var _ BackendVersion = FlokicoindVersion(0)
+var _ BackendVersion = LokidVersion(0)
 
 const (
-	// flokicoind2401Val is the int representation of flokicoind v0.24.1.
-	flokicoind2401Val = 240100
+	// lokid2401Val is the int representation of lokid v0.24.1.
+	lokid2401Val = 240100
 )
 
-// parseFlokicoindVersion parses the flokicoind version from its string representation.
-func parseFlokicoindVersion(version int32) FlokicoindVersion {
+// parseLokidVersion parses the lokid version from its string representation.
+func parseLokidVersion(version int32) LokidVersion {
 	switch {
-	case version < flokicoind2401Val:
-		return FlokicoindPre2401
+	case version < lokid2401Val:
+		return LokidPre2401
 
 	default:
-		return FlokicoindPost2401
+		return LokidPost2401
 	}
 }

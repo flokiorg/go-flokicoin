@@ -22,8 +22,8 @@ FROM $ARCH/alpine:3.16
 
 COPY --from=builder /go/bin/go-flokicoin /bin/
 
-RUN mv /bin/go-flokicoin /bin/flokicoind
+RUN mv /bin/go-flokicoin /bin/lokid
 
 EXPOSE 15212
 
-CMD ["/bin/flokicoind"]
+CMD ["/bin/lokid"]

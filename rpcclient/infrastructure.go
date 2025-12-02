@@ -1558,7 +1558,7 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 // Batch is a factory that creates a client able to interact with the server using
 // JSON-RPC 2.0. The client is capable of accepting an arbitrary number of requests
 // and having the server process the all at the same time. It's compatible with both
-// flokicoind and flokicoind
+// lokid and lokid
 func NewBatch(config *ConnConfig) (*Client, error) {
 	if !config.HTTPPostMode {
 		return nil, errors.New("http post mode is required to use batch client")
@@ -1641,15 +1641,15 @@ func (c *Client) BackendVersion() (BackendVersion, error) {
 	}
 
 	// We'll start by calling GetInfo. This method doesn't exist for
-	// flokicoind nodes as of v0.16.0, so we'll assume the client is connected
-	// to a flokicoind backend if it does exist.
+	// lokid nodes as of v0.16.0, so we'll assume the client is connected
+	// to a lokid backend if it does exist.
 	info, err := c.GetInfo()
 
 	switch err := err.(type) {
-	// Parse the flokicoind version and cache it.
+	// Parse the lokid version and cache it.
 	case nil:
-		log.Debugf("Detected flokicoind version: %v", info.Version)
-		version := parseFlokicoindVersion(info.Version)
+		log.Debugf("Detected lokid version: %v", info.Version)
+		version := parseLokidVersion(info.Version)
 		c.backendVersion = version
 		return c.backendVersion, nil
 
@@ -1657,13 +1657,13 @@ func (c *Client) BackendVersion() (BackendVersion, error) {
 	// we actually ran into an error.
 	case *chainjson.RPCError:
 		if err.Code != chainjson.ErrRPCMethodNotFound.Code {
-			return nil, fmt.Errorf("unable to detect flokicoind version: "+
+			return nil, fmt.Errorf("unable to detect lokid version: "+
 				"%v", err)
 		}
 
 	}
 
-	return nil, fmt.Errorf("unable to detect flokicoind version: %v", err)
+	return nil, fmt.Errorf("unable to detect lokid version: %v", err)
 }
 
 func (c *Client) sendAsync() (FutureGetBulkResult, error) {
@@ -1767,7 +1767,7 @@ func cutPrefix(s, prefix string) (after string, found bool) {
 }
 
 // ParseAddressString converts an address in string format to a net.Addr that is
-// compatible with flokicoind. UDP is not supported because flokicoind needs reliable
+// compatible with lokid. UDP is not supported because lokid needs reliable
 // connections.
 func ParseAddressString(strAddress string) (net.Addr, error) {
 	// Addresses can either be in unix://address, unixpacket://address URL

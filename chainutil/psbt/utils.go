@@ -257,7 +257,7 @@ func getKey(r io.Reader) (int, []byte, error) {
 		return -1, nil, ErrInvalidPsbtFormat
 	}
 
-	// The maximum value of a compact size int is capped in flokicoind, do the
+	// The maximum value of a compact size int is capped in lokid, do the
 	// same here to mimic the behavior.
 	if keyType > MaxPsbtKeyValue {
 		return -1, nil, ErrInvalidPsbtFormat

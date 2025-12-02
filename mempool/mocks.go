@@ -95,7 +95,7 @@ func (m *MockTxMempool) RemoveTransaction(tx *chainutil.Tx,
 	m.Called(tx, removeRedeemers)
 }
 
-// CheckMempoolAcceptance behaves similarly to flokicoind's `testmempoolaccept`
+// CheckMempoolAcceptance behaves similarly to lokid's `testmempoolaccept`
 // RPC method. It will perform a series of checks to decide whether this
 // transaction can be accepted to the mempool. If not, the specific error is
 // returned and the caller needs to take actions based on it.

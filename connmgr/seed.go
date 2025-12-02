@@ -62,7 +62,7 @@ func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,
 			intPort, _ := strconv.Atoi(chainParams.DefaultPort)
 			for i, peer := range seedpeers {
 				addresses[i] = wire.NetAddressV2FromBytes(
-					// flokicoind seeds with addresses from
+					// lokid seeds with addresses from
 					// a time randomly selected between 3
 					// and 7 days ago.
 					time.Now().Add(-1*time.Second*time.Duration(secondsIn3Days+

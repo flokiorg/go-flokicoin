@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file.
 
 // NOTE: This file is intended to house the RPC commands that are supported by
-// a chain server with flokicoind extensions.
+// a chain server with lokid extensions.
 
 package chainjson
 
@@ -46,14 +46,14 @@ func NewNodeCmd(subCmd NodeSubCmd, target string, connectSubCmd *string) *NodeCm
 }
 
 // DebugLevelCmd defines the debuglevel JSON-RPC command.  This command is not a
-// standard Flokicoin command.  It is an extension for flokicoind.
+// standard Flokicoin command.  It is an extension for lokid.
 type DebugLevelCmd struct {
 	LevelSpec string
 }
 
 // NewDebugLevelCmd returns a new DebugLevelCmd which can be used to issue a
 // debuglevel JSON-RPC command.  This command is not a standard Flokicoin command.
-// It is an extension for flokicoind.
+// It is an extension for lokid.
 func NewDebugLevelCmd(levelSpec string) *DebugLevelCmd {
 	return &DebugLevelCmd{
 		LevelSpec: levelSpec,

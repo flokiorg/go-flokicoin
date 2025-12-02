@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	// blockDbNamePrefix is the prefix for the flokicoind block database.
+	// blockDbNamePrefix is the prefix for the lokid block database.
 	blockDbNamePrefix = "blocks"
 )
 

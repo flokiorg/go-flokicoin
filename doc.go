@@ -4,23 +4,23 @@
 // license that can be found in the LICENSE file.
 
 /*
-flokicoind is a full-node flokicoin implementation written in Go.
+lokid is a full-node flokicoin implementation written in Go.
 
-The default options are sane for most users.  This means flokicoind will work 'out of
+The default options are sane for most users.  This means lokid will work 'out of
 the box' for most users.  However, there are also a wide variety of flags that
 can be used to control it.
 
 The following section provides a usage overview which enumerates the flags.  An
 interesting point to note is that the long form of all of these options
 (except -C) can be specified in a configuration file that is automatically
-parsed when flokicoind starts up.  By default, the configuration file is located at
-~/.flokicoind/flokicoind.conf on POSIX-style operating systems and %LOCALAPPDATA%\flokicoind\flokicoind.conf
+parsed when lokid starts up.  By default, the configuration file is located at
+~/.lokid/lokid.conf on POSIX-style operating systems and %LOCALAPPDATA%\lokid\lokid.conf
 on Windows.  The -C (--configfile) flag, as shown below, can be used to override
 this location.
 
 Usage:
 
-	flokicoind [OPTIONS]
+	lokid [OPTIONS]
 
 Application Options:
 

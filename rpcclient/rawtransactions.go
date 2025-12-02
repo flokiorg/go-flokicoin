@@ -19,7 +19,7 @@ import (
 
 const (
 	// defaultMaxFeeRate is the default maximum fee rate in FLC/kvB enforced
-	// by flokicoind v0.19.0 or after for transaction broadcast.
+	// by lokid v0.19.0 or after for transaction broadcast.
 	defaultMaxFeeRate chainjson.FLCPerkvB = 0.1
 )
 
@@ -359,17 +359,17 @@ func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx, allowHighFees bool) Fut
 	}
 
 	var cmd *chainjson.SendRawTransactionCmd
-	// Starting from flokicoind v0.19.0, the MaxFeeRate field should be used.
+	// Starting from lokid v0.19.0, the MaxFeeRate field should be used.
 	//
 	// When unified softforks format is supported, it's 0.19 and above.
 	if version.SupportUnifiedSoftForks() {
 		// Using a 0 MaxFeeRate is interpreted as a maximum fee rate not
-		// being enforced by flokicoind.
+		// being enforced by lokid.
 		var maxFeeRate chainjson.FLCPerkvB
 		if !allowHighFees {
 			maxFeeRate = defaultMaxFeeRate
 		}
-		cmd = chainjson.NewFlokicoindSendRawTransactionCmd(txHex, maxFeeRate)
+		cmd = chainjson.NewLokiSendRawTransactionCmd(txHex, maxFeeRate)
 	} else {
 		// Otherwise, use the AllowHighFees field.
 		cmd = chainjson.NewSendRawTransactionCmd(txHex, &allowHighFees)
@@ -929,7 +929,7 @@ func (c *Client) TestMempoolAcceptAsync(txns []*wire.MsgTx,
 
 	// Exit early if the version is below 22.0.0.
 	//
-	// Based on the history of `testmempoolaccept` in flokicoind,
+	// Based on the history of `testmempoolaccept` in lokid,
 	// - introduced in 0.17.0
 	// - unchanged in 0.18.0
 	// - allowhighfees(bool) param is changed to maxfeerate(numeric) in

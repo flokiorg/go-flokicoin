@@ -1029,7 +1029,7 @@ func executeTaprootRefTest(t *testing.T, testCase taprootJsonTest) {
 
 // TestTaprootReferenceTests test that we're able to properly validate (success
 // and failure paths for each test) the set of functional generative tests
-// created by the flokicoind project for taproot at:
+// created by the lokid project for taproot at:
 // https://github.com/bitcoin/bitcoin/blob/master/test/functional/feature_taproot.py.
 func TestTaprootReferenceTests(t *testing.T) {
 	t.Parallel()

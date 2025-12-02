@@ -11,14 +11,14 @@ Package rpcclient implements a websocket-enabled Flokicoin JSON-RPC client.
 This client provides a robust and easy-to-use interface for connecting with an
 RPC server that utilizes a JSON-RPC API compatible with a core-based system.
 
-In addition to the compatible standard HTTP POST JSON-RPC API, flokicoind and
+In addition to the compatible standard HTTP POST JSON-RPC API, lokid and
 walletd provide a websocket interface that is more efficient than the standard
 HTTP POST method of accessing RPC.  The section below discusses the differences
 between HTTP POST and websockets.
 
 By default, this client assumes the RPC server supports websockets and has
 TLS enabled.  In practice, this currently means it assumes you are talking to
-flokicoind or walletd by default.  However, configuration options are provided to
+lokid or walletd by default.  However, configuration options are provided to
 fall back to HTTP POST and disable TLS to support talking with inferior flokicoin
 core style RPC servers.
 
@@ -29,7 +29,7 @@ issues the call, waits for the response, and closes the connection.  This adds
 quite a bit of overhead to every call and lacks flexibility for features such as
 notifications.
 
-In contrast, the websocket-based JSON-RPC interface provided by flokicoind and
+In contrast, the websocket-based JSON-RPC interface provided by lokid and
 walletd only uses a single connection that remains open and allows
 asynchronous bi-directional communication.
 
@@ -61,7 +61,7 @@ The first important part of notifications is to realize that they will only
 work when connected via websockets.  This should intuitively make sense
 because HTTP POST mode does not keep a connection open!
 
-All notifications provided by flokicoind require registration to opt-in.  For example,
+All notifications provided by lokid require registration to opt-in.  For example,
 if you want to be notified when funds are received by a set of addresses, you
 register the addresses via the NotifyReceived (or NotifyReceivedAsync) function.
 
@@ -101,15 +101,15 @@ flag to true in the connection config when creating the client.
 Minor RPC Server Differences and Chain/Wallet Separation
 
 Some of the commands are extensions specific to a particular RPC server.  For
-example, the DebugLevel call is an extension only provided by flokicoind (and
+example, the DebugLevel call is an extension only provided by lokid (and
 walletd passthrough).  Therefore if you call one of these commands against
 an RPC server that doesn't provide them, you will get an unimplemented error
 from the server.  An effort has been made to call out which commands are
 extensions in their documentation.
 
-Also, it is important to realize that flokicoind intentionally separates the wallet
+Also, it is important to realize that lokid intentionally separates the wallet
 functionality into a separate process named walletd.  This means if you are
-connected to the flokicoind RPC server directly, only the RPCs which are related to
+connected to the lokid RPC server directly, only the RPCs which are related to
 chain services will be available.  Depending on your application, you might only
 need chain-related RPCs.  In contrast, walletd provides pass through treatment
 for chain-related RPCs, so it supports them in addition to wallet-related RPCs.
@@ -164,8 +164,8 @@ The following full-blown client examples are in the examples directory:
   - bitcoincorehttp
     Connects to a flokicoin RPC server using HTTP POST mode with TLS disabled
     and gets the current block count
-  - flokicoindwebsockets
-    Connects to a flokicoind RPC server using TLS-secured websockets, registers for
+  - lokidwebsockets
+    Connects to a lokid RPC server using TLS-secured websockets, registers for
     block connected and block disconnected notifications, and gets the current
     block count
   - walletdwebsockets

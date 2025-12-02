@@ -626,7 +626,7 @@ func expectedInputs(script []byte, class ScriptClass) int {
 		// of sigs and number of keys.  Check the first push instruction
 		// to see how many arguments are expected. typeOfScript already
 		// checked this so we know it'll be a small int.  Also, due to
-		// the original flokicoind bug where OP_CHECKMULTISIG pops an
+		// the original lokid bug where OP_CHECKMULTISIG pops an
 		// additional item from the stack, add an extra expected input
 		// for the extra push that is required to compensate.
 		return AsSmallInt(script[0]) + 1

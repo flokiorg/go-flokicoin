@@ -9,7 +9,7 @@ Package blockchain implements flokicoin block handling and chain selection rules
 The flokicoin block handling and chain selection rules are an integral, and quite
 likely the most important, part of flokicoin.  Unfortunately, at the time of
 this writing, these rules are also largely undocumented and had to be
-ascertained from the flokicoind source code.  At its core, flokicoin is a
+ascertained from the lokid source code.  At its core, flokicoin is a
 distributed consensus of which blocks are valid and which ones will comprise the
 main block chain (public ledger) that ultimately determines accepted
 transactions, so it is extremely important that fully validating nodes agree on

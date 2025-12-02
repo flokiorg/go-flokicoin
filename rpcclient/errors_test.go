@@ -72,16 +72,16 @@ func TestMatchErrStr(t *testing.T) {
 }
 
 // TestMapRPCErr checks that `MapRPCErr` can correctly map a given error to
-// the corresponding error in the `FlokicoindErrMap` or `FlokicoindErrors` map.
+// the corresponding error in the `LokidErrMap` or `LokidErrors` map.
 func TestMapRPCErr(t *testing.T) {
 	t.Parallel()
 
 	require := require.New(t)
 
-	// Get all known flokicoind errors.
+	// Get all known lokid errors.
 	bitcoindErrors := make([]error, 0, errSentinel)
 	for i := uint32(0); i < uint32(errSentinel); i++ {
-		err := FlokicoindRPCErr(i)
+		err := LokidRPCErr(i)
 		bitcoindErrors = append(bitcoindErrors, err)
 	}
 
@@ -91,9 +91,9 @@ func TestMapRPCErr(t *testing.T) {
 	require.ErrorIs(err, ErrUndefined)
 
 	// A known error should be mapped to the corresponding error in the
-	// `FlokicoindErrMap` or `bitcoindErrors` map.
-	for flokicoindErrStr, mappedErr := range FlokicoindErrMap {
-		err := MapRPCErr(errors.New(flokicoindErrStr))
+	// `LokidErrMap` or `bitcoindErrors` map.
+	for lokidErrStr, mappedErr := range LokidErrMap {
+		err := MapRPCErr(errors.New(lokidErrStr))
 		require.ErrorIs(err, mappedErr)
 
 		err = MapRPCErr(mappedErr)
@@ -106,15 +106,15 @@ func TestMapRPCErr(t *testing.T) {
 	}
 }
 
-// TestFlokicoindErrorSentinel checks that all defined FlokicoindRPCErr errors are
+// TestLokidErrorSentinel checks that all defined LokidRPCErr errors are
 // added to the method `Error`.
-func TestFlokicoindErrorSentinel(t *testing.T) {
+func TestLokidErrorSentinel(t *testing.T) {
 	t.Parallel()
 
 	rt := require.New(t)
 
 	for i := uint32(0); i < uint32(errSentinel); i++ {
-		err := FlokicoindRPCErr(i)
+		err := LokidRPCErr(i)
 		rt.NotEqualf(err.Error(), "unknown error", "error code %d is "+
 			"not defined, make sure to update it inside the Error "+
 			"method", i)

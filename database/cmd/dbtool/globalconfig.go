@@ -19,20 +19,20 @@ import (
 )
 
 var (
-	flokicoindHomeDir = chainutil.AppDataDir("flokicoind", false)
-	knownDbTypes      = database.SupportedDrivers()
-	activeNetParams   = &chaincfg.MainNetParams
+	lokidHomeDir    = chainutil.AppDataDir("lokid", false)
+	knownDbTypes    = database.SupportedDrivers()
+	activeNetParams = &chaincfg.MainNetParams
 
 	// Default global config.
 	cfg = &config{
-		DataDir: filepath.Join(flokicoindHomeDir, "data"),
+		DataDir: filepath.Join(lokidHomeDir, "data"),
 		DbType:  "ffldb",
 	}
 )
 
 // config defines the global configuration options.
 type config struct {
-	DataDir        string `short:"b" long:"datadir" description:"Location of the flokicoind data directory"`
+	DataDir        string `short:"b" long:"datadir" description:"Location of the lokid data directory"`
 	DbType         string `long:"dbtype" description:"Database backend to use for the Block Chain"`
 	RegressionTest bool   `long:"regtest" description:"Use the regression test network"`
 	SimNet         bool   `long:"simnet" description:"Use the simulation test network"`
@@ -61,7 +61,7 @@ func validDbType(dbType string) bool {
 }
 
 // netName returns the name used when referring to a flokicoin network.  At the
-// time of writing, flokicoind currently places blocks for testnet version 3 in the
+// time of writing, lokid currently places blocks for testnet version 3 in the
 // data and log directory "testnet", which does not match the Name field of the
 // chaincfg parameters.  This function can be used to override this directory name
 // as "testnet" when the passed active network matches wire.TestNet3.

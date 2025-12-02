@@ -603,7 +603,7 @@ func checkBlockSanity(block *chainutil.Block, powLimit *big.Int, timeSource Medi
 	// Build merkle tree and ensure the calculated merkle root matches the
 	// entry in the block header.  This also has the effect of caching all
 	// of the transaction hashes in the block to speed up future hash
-	// checks.  Flokicoind builds the tree here and checks the merkle root
+	// checks.  Lokid builds the tree here and checks the merkle root
 	// after the following checks, but there is no reason not to check the
 	// merkle root matches here.
 	calcMerkleRoot := CalcMerkleRoot(block.Transactions(), false)
@@ -1108,7 +1108,7 @@ func CheckTransactionInputs(tx *chainutil.Tx, txHeight int32, utxoView *UtxoView
 		return 0, ruleError(ErrSpendTooHigh, str)
 	}
 
-	// NOTE: flokicoind checks if the transaction fees are < 0 here, but that
+	// NOTE: lokidks if the transaction fees are < 0 here, but that
 	// is an impossible condition because of the check above that ensures
 	// the inputs are >= the outputs.
 	txFeeInLoki := totalLokiIn - totalLokiOut

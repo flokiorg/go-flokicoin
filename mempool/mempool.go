@@ -1307,7 +1307,7 @@ type MempoolAcceptResult struct {
 	bestHeight int32
 }
 
-// CheckMempoolAcceptance behaves similarly to flokicoind's `testmempoolaccept`
+// CheckMempoolAcceptance behaves similarly to lokid's `testmempoolaccept`
 // RPC method. It will perform a series of checks to decide whether this
 // transaction can be accepted to the mempool. If not, the specific error is
 // returned and the caller needs to take actions based on it.
@@ -1734,7 +1734,7 @@ func (mp *TxPool) validateRelayFeeMet(tx *chainutil.Tx, txFee, txSize int64,
 	nowUnix := time.Now().Unix()
 
 	// Decay passed data with an exponentially decaying ~10 minute window -
-	// matches flokicoind handling.
+	// matches lokid handling.
 	mp.pennyTotal *= math.Pow(
 		1.0-1.0/600.0, float64(nowUnix-mp.lastPennyUnix),
 	)

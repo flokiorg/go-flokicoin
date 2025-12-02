@@ -70,7 +70,7 @@ goimports:
 build:
 	@$(call print, "Building all binaries")
 	$(GOBUILD) $(PKG)
-	$(GOBUILD) $(PKG)/cmd/flokicoind-cli
+	$(GOBUILD) $(PKG)/cmd/lokid-cli
 	$(GOBUILD) $(PKG)/cmd/gencerts
 	$(GOBUILD) $(PKG)/cmd/findcheckpoint
 	$(GOBUILD) $(PKG)/cmd/addblock
@@ -79,16 +79,16 @@ build:
 install:
 	@$(call print, "Installing all binaries")
 	$(GOINSTALL) $(PKG)
-	$(GOINSTALL) $(PKG)/cmd/flokicoind-cli
+	$(GOINSTALL) $(PKG)/cmd/lokid-cli
 	$(GOINSTALL) $(PKG)/cmd/gencerts
 	$(GOINSTALL) $(PKG)/cmd/findcheckpoint
 	$(GOINSTALL) $(PKG)/cmd/addblock
 
-#? release-install: Install flokicoind and flokicoind-cli release binaries, place them in $GOPATH/bin
+#? release-install: Install lokid and lokid-cli release binaries, place them in $GOPATH/bin
 release-install:
-	@$(call print, "Installing flokicoind and flokicoind-cli release binaries")
+	@$(call print, "Installing lokid and lokid-cli release binaries")
 	env CGO_ENABLED=0 $(GOINSTALL) -trimpath -ldflags="-s -w -buildid=" $(PKG)
-	env CGO_ENABLED=0 $(GOINSTALL) -trimpath -ldflags="-s -w -buildid=" $(PKG)/cmd/flokicoind-cli
+	env CGO_ENABLED=0 $(GOINSTALL) -trimpath -ldflags="-s -w -buildid=" $(PKG)/cmd/lokid-cli
 
 # =======
 # TESTING
@@ -165,7 +165,7 @@ tidy-module:
 
 #? help: Get more info on make commands
 help: Makefile
-	@echo " Choose a command run in flokicoind:"
+	@echo " Choose a command run in lokid:"
 	@sed -n 's/^#?//p' $< | column -t -s ':' |  sort | sed -e 's/^/ /'
 
 .PHONY: help

@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	// ErrBackendVersion is returned when running against a flokicoind or
-	// flokicoind that is older than the minimum version supported by the
+	// ErrBackendVersion is returned when running against a lokid or
+	// lokid that is older than the minimum version supported by the
 	// rpcclient.
 	ErrBackendVersion = errors.New("backend version too low")
 
@@ -22,15 +22,15 @@ var (
 	ErrUndefined = errors.New("undefined")
 )
 
-// FlokicoindRPCErr represents an error returned by flokicoind's RPC server.
-type FlokicoindRPCErr uint32
+// LokidRPCErr represents an error returned by lokid's RPC server.
+type LokidRPCErr uint32
 
 // This section defines all possible errors or reject reasons returned from
-// flokicoind's `sendrawtransaction` or `testmempoolaccept` RPC.
+// lokid's `sendrawtransaction` or `testmempoolaccept` RPC.
 const (
 	// ErrMissingInputsOrSpent is returned when calling
 	// `sendrawtransaction` with missing inputs.
-	ErrMissingInputsOrSpent FlokicoindRPCErr = iota
+	ErrMissingInputsOrSpent LokidRPCErr = iota
 
 	// ErrMaxBurnExceeded is returned when calling `sendrawtransaction`
 	// with exceeding, falling short of, and equaling maxburnamount.
@@ -69,7 +69,7 @@ const (
 
 	// ErrTooManyReplacements is returned when a transaction causes too
 	// many transactions being replaced. This is set by
-	// `MAX_REPLACEMENT_CANDIDATES` in `flokicoind` and defaults to 100.
+	// `MAX_REPLACEMENT_CANDIDATES` in `lokid` and defaults to 100.
 	//
 	// NOTE: RBF rule 5.
 	ErrTooManyReplacements
@@ -92,7 +92,7 @@ const (
 	// non-witness bytes) that is disallowed.
 	//
 	// NOTE: ErrTxTooLarge must be put after ErrTxTooSmall because it's a
-	// subset of ErrTxTooSmall. Otherwise, if flokicoind returns
+	// subset of ErrTxTooSmall. Otherwise, if lokid returns
 	// `tx-size-small`, it will be matched to ErrTxTooLarge.
 	ErrTxTooSmall
 
@@ -201,7 +201,7 @@ const (
 )
 
 // Error implements the error interface. It returns the error message defined
-// in `flokicoind`.
+// in `lokid`.
 
 // Some of the dashes used in the original error string is removed, e.g.
 // "missing-inputs" is now "missing inputs". This is ok since we will normalize
@@ -215,7 +215,7 @@ const (
 // - https://github.com/bitcoin/bitcoin/blob/master/test/functional/mempool_dust.py
 // - https://github.com/bitcoin/bitcoin/blob/master/test/functional/mempool_limit.py
 // - https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp
-func (r FlokicoindRPCErr) Error() string {
+func (r LokidRPCErr) Error() string {
 	switch r {
 	case ErrMissingInputsOrSpent:
 		return "bad-txns-inputs-missingorspent"
@@ -338,12 +338,12 @@ func (r FlokicoindRPCErr) Error() string {
 	return "unknown error"
 }
 
-// FlokicoindErrMap takes the errors returned from flokicoind's `testmempoolaccept` and
+// LokidErrMap takes the errors returned from lokid's `testmempoolaccept` and
 // `sendrawtransaction` RPCs and map them to the errors defined above, which
 // are results from calling either `testmempoolaccept` or `sendrawtransaction`
-// in `flokicoind`.
+// in `lokid`.
 //
-// Errors not mapped in `flokicoind`:
+// Errors not mapped in `lokid`:
 //   - deployment error from `validateSegWitDeployment`.
 //   - the error when total inputs is higher than max allowed value from
 //     `CheckTransactionInputs`.
@@ -355,7 +355,7 @@ func (r FlokicoindRPCErr) Error() string {
 // usage case of LND.
 //
 //nolint:lll
-var FlokicoindErrMap = map[string]error{
+var LokidErrMap = map[string]error{
 	// BIP125 related errors.
 	//
 	// When fee rate used or fees paid doesn't meet the requirements.
@@ -363,7 +363,7 @@ var FlokicoindErrMap = map[string]error{
 	"replacement transaction has an insufficient absolute fee": ErrInsufficientFee,
 
 	// When a transaction causes too many transactions being replaced. This
-	// is set by `MAX_REPLACEMENT_CANDIDATES` in `flokicoind` and defaults to
+	// is set by `MAX_REPLACEMENT_CANDIDATES` in `lokid` and defaults to
 	// 100.
 	"replacement transaction evicts more transactions than permitted": ErrTooManyReplacements,
 
@@ -412,7 +412,7 @@ var FlokicoindErrMap = map[string]error{
 
 	// A transaction in the mempool.
 	//
-	// NOTE: For flokicoind v0.24.2 and beyond, the error message is "already
+	// NOTE: For lokid v0.24.2 and beyond, the error message is "already
 	// have transaction in mempool".
 	"already have transaction": ErrTxAlreadyInMempool,
 
@@ -461,36 +461,36 @@ var FlokicoindErrMap = map[string]error{
 	// A transaction that is locked by BIP68 sequence logic.
 	"transaction's sequence locks on inputs not met": ErrNonBIP68Final,
 
-	// TODO(yy): find/return the following errors in `flokicoind`.
+	// TODO(yy): find/return the following errors in `lokid`.
 	//
 	// A tiny transaction(in non-witness bytes) that is disallowed.
-	// "unmatched flokicoind error 1": ErrTxTooSmall,
-	// "unmatched flokicoind error 2": ErrScriptVerifyFlag,
+	// "unmatched lokid error 1": ErrTxTooSmall,
+	// "unmatched lokid error 2": ErrScriptVerifyFlag,
 	// // A transaction with invalid OP codes.
-	// "unmatched flokicoind error 3": ErrInvalidOpcode,
+	// "unmatched lokid error 3": ErrInvalidOpcode,
 	// // Minimally-small transaction(in non-witness bytes) that is
 	// // allowed.
-	// "unmatched flokicoind error 4": ErrSameNonWitnessData,
+	// "unmatched lokid error 4": ErrSameNonWitnessData,
 }
 
 // MapRPCErr takes an error returned from calling RPC methods from various
-// chain backend and map it to an defined error here. It uses the `FlokicoindErrMap`
-// defined above, whose keys are flokicoind error strings and values are errors made
-// from flokicoind error strings.
+// chain backend and map it to an defined error here. It uses the `LokidErrMap`
+// defined above, whose keys are lokid error strings and values are errors made
+// from lokid error strings.
 //
-// NOTE: we assume neutrino shares the same error strings as flokicoind.
+// NOTE: we assume neutrino shares the same error strings as lokid.
 func MapRPCErr(rpcErr error) error {
 	// Iterate the map and find the matching error.
-	for flokicoindErr, err := range FlokicoindErrMap {
-		// Match it against flokicoind's error first.
-		if matchErrStr(rpcErr, flokicoindErr) {
+	for lokidErr, err := range LokidErrMap {
+		// Match it against lokid's error first.
+		if matchErrStr(rpcErr, lokidErr) {
 			return err
 		}
 	}
 
-	// If not found, try to match it against flokicoind's error.
+	// If not found, try to match it against lokid's error.
 	for i := uint32(0); i < uint32(errSentinel); i++ {
-		err := FlokicoindRPCErr(i)
+		err := LokidRPCErr(i)
 		if matchErrStr(rpcErr, err.Error()) {
 			return err
 		}

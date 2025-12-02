@@ -59,7 +59,7 @@ func HashToBig(hash *chainhash.Hash) *big.Int {
 //
 // This compact form is only used in flokicoin to encode unsigned 256-bit numbers
 // which represent difficulty targets, thus there really is not a need for a
-// sign bit, but it is implemented here to stay consistent with flokicoind.
+// sign bit, but it is implemented here to stay consistent with lokid.
 func CompactToBig(compact uint32) *big.Int {
 	return workmath.CompactToBig(compact)
 }
@@ -259,7 +259,7 @@ func calcNextWorkLegacy(lastNode HeaderCtx, _ time.Time, c ChainCtx) (uint32, er
 	// Calculate new target difficulty as:
 	//  currentDifficulty * (adjustedTimespan / targetTimespan)
 	// The result uses integer division which means it will be slightly
-	// rounded down.  Flokicoind also uses integer division to calculate this
+	// rounded down.  lokid uses integer division to calculate this
 	// result.
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(adjustedTimespan))
 	targetTimeSpan := int64(c.ChainParams().TargetTimespan / time.Second)

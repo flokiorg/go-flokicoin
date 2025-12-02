@@ -888,7 +888,7 @@ func TestTxOutPointFromString(t *testing.T) {
 	}
 }
 
-// TestTxSuperfluousWitnessRecord ensures that flokicoind fails to parse a tx with
+// TestTxSuperfluousWitnessRecord ensures that lokid fails to parse a tx with
 // the witness marker flag set but without any actual witnesses.
 func TestTxSuperfluousWitnessRecord(t *testing.T) {
 	m := &MsgTx{}

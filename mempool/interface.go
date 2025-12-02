@@ -57,7 +57,7 @@ type TxMempool interface {
 	// orphans.
 	RemoveTransaction(tx *chainutil.Tx, removeRedeemers bool)
 
-	// CheckMempoolAcceptance behaves similarly to flokicoind's
+	// CheckMempoolAcceptance behaves similarly to lokid's
 	// `testmempoolaccept` RPC method. It will perform a series of checks
 	// to decide whether this transaction can be accepted to the mempool.
 	// If not, the specific error is returned and the caller needs to take

@@ -59,67 +59,67 @@ func isSupportedDbType(dbType string) bool {
 	return false
 }
 
-// loadBlocks reads a flokicoind block file and returns all contained blocks.
+// loadBlocks reads a lokid block file and returns all contained blocks.
 // The network is enforced via the provided params.
 func loadBlocks(filename string, params *chaincfg.Params) (blocks []*chainutil.Block, err error) {
-    filename = filepath.Join("testdata/", filename)
+	filename = filepath.Join("testdata/", filename)
 
-    // Open the file and select reader based on extension.
-    fi, err := os.Open(filename)
-    if err != nil {
-        return nil, err
-    }
-    defer fi.Close()
+	// Open the file and select reader based on extension.
+	fi, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer fi.Close()
 
-    var dr io.Reader
-    if strings.HasSuffix(filename, ".bz2") {
-        dr = bzip2.NewReader(fi)
-    } else {
-        dr = fi
-    }
+	var dr io.Reader
+	if strings.HasSuffix(filename, ".bz2") {
+		dr = bzip2.NewReader(fi)
+	} else {
+		dr = fi
+	}
 
-    expectedMagic := uint32(params.Net)
-    var seenAny bool
+	expectedMagic := uint32(params.Net)
+	var seenAny bool
 
-    for {
-        // Read network magic.
-        var magic uint32
-        if err = binary.Read(dr, binary.LittleEndian, &magic); err != nil {
-            if err == io.EOF {
-                if !seenAny {
-                    return nil, io.EOF
-                }
-                return blocks, nil
-            }
-            return nil, err
-        }
-        if magic != expectedMagic {
-            if !seenAny {
-                return nil, fmt.Errorf("unexpected network magic in block file")
-            }
-            // Stop on network change after having read at least one block.
-            return blocks, nil
-        }
+	for {
+		// Read network magic.
+		var magic uint32
+		if err = binary.Read(dr, binary.LittleEndian, &magic); err != nil {
+			if err == io.EOF {
+				if !seenAny {
+					return nil, io.EOF
+				}
+				return blocks, nil
+			}
+			return nil, err
+		}
+		if magic != expectedMagic {
+			if !seenAny {
+				return nil, fmt.Errorf("unexpected network magic in block file")
+			}
+			// Stop on network change after having read at least one block.
+			return blocks, nil
+		}
 
-        // Read block length.
-        var blockLen uint32
-        if err = binary.Read(dr, binary.LittleEndian, &blockLen); err != nil {
-            return nil, err
-        }
+		// Read block length.
+		var blockLen uint32
+		if err = binary.Read(dr, binary.LittleEndian, &blockLen); err != nil {
+			return nil, err
+		}
 
-        // Read the full block payload.
-        rbytes := make([]byte, blockLen)
-        if _, err = io.ReadFull(dr, rbytes); err != nil {
-            return nil, err
-        }
+		// Read the full block payload.
+		rbytes := make([]byte, blockLen)
+		if _, err = io.ReadFull(dr, rbytes); err != nil {
+			return nil, err
+		}
 
-        block, err := chainutil.NewBlockFromBytes(rbytes)
-        if err != nil {
-            return nil, err
-        }
-        blocks = append(blocks, block)
-        seenAny = true
-    }
+		block, err := chainutil.NewBlockFromBytes(rbytes)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
+		seenAny = true
+	}
 }
 
 // chainSetup is used to create a new db and chain instance with the genesis

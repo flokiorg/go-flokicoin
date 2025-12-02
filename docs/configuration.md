@@ -1,11 +1,11 @@
 # Configuration
 
-flokicoind has a number of [configuration](https://pkg.go.dev/github.com/flokiorg/go-flokicoin)
-options, which can be viewed by running: `$ flokicoind --help`.
+lokid has a number of [configuration](https://pkg.go.dev/github.com/flokiorg/go-flokicoin)
+options, which can be viewed by running: `$ lokid --help`.
 
 ## Peer server listen interface
 
-flokicoind allows you to bind to specific interfaces which enables you to setup
+lokid allows you to bind to specific interfaces which enables you to setup
 configurations with varying levels of complexity.  The listen parameter can be
 specified on the command line as shown below with the -- prefix or in the
 configuration file without the -- prefix (as can all long command line options).
@@ -32,7 +32,7 @@ Command Line Examples:
 |--listen=127.0.0.1:8337 --listen=[::1]:15212|IPv4 localhost on port 8337 and IPv6 localhost on port 15212|
 |--listen=:15212 --listen=:8337|all interfaces on ports 15212 and 8337|
 
-The following config file would configure flokicoind to only listen on localhost for both IPv4 and IPv6:
+The following config file would configure lokid to only listen on localhost for both IPv4 and IPv6:
 
 ```text
 [Application Options]
@@ -41,17 +41,17 @@ listen=127.0.0.1:15212
 listen=[::1]:15212
 ```
 
-In addition, if you are starting flokicoind with TLS and want to make it
+In addition, if you are starting lokid with TLS and want to make it
 available via a hostname, then you will need to generate the TLS
 certificates for that host. For example,
 
 ```
-gencerts --host=myhostname.example.com --directory=/home/me/.flokicoind/
+gencerts --host=myhostname.example.com --directory=/home/me/.lokid/
 ```
 
 ## RPC server listen interface
 
-flokicoind allows you to bind the RPC server to specific interfaces which enables you
+lokid allows you to bind the RPC server to specific interfaces which enables you
 to setup configurations with varying levels of complexity.  The `rpclisten`
 parameter can be specified on the command line as shown below with the -- prefix
 or in the configuration file without the -- prefix (as can all long command line
@@ -92,7 +92,7 @@ Command Line Examples:
 |--rpclisten=127.0.0.1:8337 --listen=[::1]:15216|IPv4 localhost on port 8337 and IPv6 localhost on port 15216|
 |--rpclisten=:15216 --listen=:8337|all interfaces on ports 15216 and 8337|
 
-The following config file would configure the flokicoind RPC server to listen to all interfaces on the default port, including external interfaces, for both IPv4 and IPv6:
+The following config file would configure the lokid RPC server to listen to all interfaces on the default port, including external interfaces, for both IPv4 and IPv6:
 
 ```text
 [Application Options]
@@ -102,15 +102,15 @@ rpclisten=
 
 ## Default ports
 
-While flokicoind is highly configurable when it comes to the network configuration,
+While lokid is highly configurable when it comes to the network configuration,
 the following is intended to be a quick reference for the default ports used so
 port forwarding can be configured as required.
 
-flokicoind provides a `--upnp` flag which can be used to automatically map the bitcoin
+lokid provides a `--upnp` flag which can be used to automatically map the bitcoin
 peer-to-peer listening port if your router supports UPnP.  If your router does
 not support UPnP, or you don't wish to use it, please note that only the bitcoin
 peer-to-peer port should be forwarded unless you specifically want to allow RPC
-access to your flokicoind from external sources such as in more advanced network
+access to your lokid from external sources such as in more advanced network
 configurations.
 
 |Name|Port|
@@ -162,14 +162,14 @@ checkpoints for the known-good block chain at periodic intervals.  This ensures
 that not only is it a valid chain, but it is the same chain that everyone else
 is using.
 
-### How do I use bootstrap.dat with flokicoind?
+### How do I use bootstrap.dat with lokid?
 
-flokicoind comes with a separate utility named `addblock` which can be used to import
+lokid comes with a separate utility named `addblock` which can be used to import
 `bootstrap.dat`.  This approach is used since the import is a one-time operation
 and we prefer to keep the daemon itself as lightweight as possible.
 
-1. Stop flokicoind if it is already running.  This is required since addblock needs to
-   access the database used by flokicoind and it will be locked if flokicoind is using it.
+1. Stop lokid if it is already running.  This is required since addblock needs to
+   access the database used by lokid and it will be locked if lokid is using it.
 2. Note the path to the downloaded bootstrap.dat file.
 3. Run the addblock utility with the `-i` argument pointing to the location of
    bootstrap.dat:
@@ -177,7 +177,7 @@ and we prefer to keep the daemon itself as lightweight as possible.
 **Windows:**
 
 ```bat
-"%PROGRAMFILES%\flokicoind\addblock" -i C:\Path\To\bootstrap.dat
+"%PROGRAMFILES%\lokid\addblock" -i C:\Path\To\bootstrap.dat
 ```
 
 **Linux/Unix/BSD/POSIX:**

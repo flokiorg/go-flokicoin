@@ -85,7 +85,7 @@ func (c *Client) waitForGetBlockRes(respChan chan *Response, hash string,
 	res, err := ReceiveFuture(respChan)
 
 	// If we receive an invalid parameter error, then we may be
-	// communicating with a flokicoind node which only understands the legacy
+	// communicating with a lokid node which only understands the legacy
 	// request, so we'll try that.
 	if err, ok := err.(*chainjson.RPCError); ok &&
 		err.Code == chainjson.ErrRPCInvalidParams.Code {
@@ -196,7 +196,7 @@ func (c *Client) GetBlockVerboseAsync(blockHash *chainhash.Hash) FutureGetBlockV
 	if blockHash != nil {
 		hash = blockHash.String()
 	}
-	// From the flokicoind-cli getblock documentation:
+	// From the lokid-cli getblock documentation:
 	// "If verbosity is 1, returns an Object with information about block ."
 	cmd := chainjson.NewGetBlockCmd(hash, chainjson.Int(1))
 	return FutureGetBlockVerboseResult{
@@ -251,7 +251,7 @@ func (c *Client) GetBlockVerboseTxAsync(blockHash *chainhash.Hash) FutureGetBloc
 		hash = blockHash.String()
 	}
 
-	// From the flokicoind-cli getblock documentation:
+	// From the lokid-cli getblock documentation:
 	//
 	// If verbosity is 2, returns an Object with information about block
 	// and information about each transaction.
@@ -441,7 +441,7 @@ func unmarshalPartialGetBlockChainInfoResult(res []byte) (*chainjson.GetBlockCha
 func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *chainjson.GetBlockChainInfoResult,
 	version BackendVersion, res []byte) error {
 
-	// Versions of flokicoind on or after v0.19.0 use the unified format.
+	// Versions of lokid on or after v0.19.0 use the unified format.
 	if version.SupportUnifiedSoftForks() {
 		var softForks chainjson.UnifiedSoftForks
 		if err := json.Unmarshal(res, &softForks); err != nil {

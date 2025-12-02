@@ -152,7 +152,7 @@ type NotificationHandlers struct {
 	// OnRescanFinished is invoked after a rescan finishes due to a previous
 	// call to Rescan or RescanEndHeight.  Finished rescans should be
 	// signaled on this notification, rather than relying on the return
-	// result of a rescan request, due to how flokicoind may send various rescan
+	// result of a rescan request, due to how lokid may send various rescan
 	// notifications after the rescan request has already returned.
 	//
 	// Deprecated: Not used with RescanBlocks.
@@ -177,12 +177,12 @@ type NotificationHandlers struct {
 	// made to register for the notification and the function is non-nil.
 	OnTxAcceptedVerbose func(txDetails *chainjson.TxRawResult)
 
-	// OnFlokicoindConnected is invoked when a wallet connects or disconnects from
-	// flokicoind.
+	// OnLokidConnected is invoked when a wallet connects or disconnects from
+	// lokid.
 	//
 	// This will only be available when client is connected to a wallet
 	// server such as walletd.
-	OnFlokicoindConnected func(connected bool)
+	OnLokidConnected func(connected bool)
 
 	// OnAccountBalance is invoked with account balance updates.
 	//
@@ -407,22 +407,22 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		c.ntfnHandlers.OnTxAcceptedVerbose(rawTx)
 
-	// OnFlokicoindConnected
+	// OnLokidConnected
 	case chainjson.ConnectedNtfnMethod:
 		// Ignore the notification if the client is not interested in
 		// it.
-		if c.ntfnHandlers.OnFlokicoindConnected == nil {
+		if c.ntfnHandlers.OnLokidConnected == nil {
 			return
 		}
 
 		connected, err := parseConnectedNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid flokicoind connected "+
+			log.Warnf("Received invalid lokid connected "+
 				"notification: %v", err)
 			return
 		}
 
-		c.ntfnHandlers.OnFlokicoindConnected(connected)
+		c.ntfnHandlers.OnLokidConnected(connected)
 
 	// OnAccountBalance
 	case chainjson.AccountBalanceNtfnMethod:
@@ -526,7 +526,7 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 // parseFilteredBlockConnectedParams parses out the parameters included in a
 // filteredblockconnected notification.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a lokid extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	*wire.BlockHeader, []*chainutil.Tx, error) {
@@ -582,7 +582,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 // parseFilteredBlockDisconnectedParams parses out the parameters included in a
 // filteredblockdisconnected notification.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a lokid extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	*wire.BlockHeader, error) {
@@ -773,8 +773,8 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*chainjson.TxRa
 	return &rawTx, nil
 }
 
-// parseConnectedNtfnParams parses out the connection status of flokicoind
-// and walletd from the parameters of a flokicoindconnected notification.
+// parseConnectedNtfnParams parses out the connection status of lokid
+// and walletd from the parameters of a lokidconnected notification.
 func parseConnectedNtfnParams(params []json.RawMessage) (bool, error) {
 	if len(params) != 1 {
 		return false, wrongNumParams(len(params))
@@ -869,7 +869,7 @@ func (r FutureNotifyBlocksResult) Receive() error {
 //
 // See NotifyBlocks for the blocking version and more details.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
@@ -895,7 +895,7 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 // The notifications delivered as a result of this call will be via one of
 // OnBlockConnected or OnBlockDisconnected.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 func (c *Client) NotifyBlocks() error {
 	return c.NotifyBlocksAsync().Receive()
 }
@@ -947,7 +947,7 @@ func newOutPointFromWire(op *wire.OutPoint) chainjson.OutPoint {
 //
 // See NotifySpent for the blocking version and more details.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use LoadTxFilterAsync instead.
 func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentResult {
@@ -979,7 +979,7 @@ func (c *Client) NotifySpentAsync(outpoints []*wire.OutPoint) FutureNotifySpentR
 // The notifications delivered as a result of this call will be via
 // OnRedeemingTx.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use LoadTxFilter instead.
 func (c *Client) NotifySpent(outpoints []*wire.OutPoint) error {
@@ -1003,7 +1003,7 @@ func (r FutureNotifyNewTransactionsResult) Receive() error {
 //
 // See NotifyNewTransactionsAsync for the blocking version and more details.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransactionsResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
@@ -1030,7 +1030,7 @@ func (c *Client) NotifyNewTransactionsAsync(verbose bool) FutureNotifyNewTransac
 // OnTxAccepted (when verbose is false) or OnTxAcceptedVerbose (when verbose is
 // true).
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 func (c *Client) NotifyNewTransactions(verbose bool) error {
 	return c.NotifyNewTransactionsAsync(verbose).Receive()
 }
@@ -1074,7 +1074,7 @@ func (c *Client) notifyReceivedInternal(addresses []string) FutureNotifyReceived
 //
 // See NotifyReceived for the blocking version and more details.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use LoadTxFilterAsync instead.
 func (c *Client) NotifyReceivedAsync(addresses []chainutil.Address) FutureNotifyReceivedResult {
@@ -1114,7 +1114,7 @@ func (c *Client) NotifyReceivedAsync(addresses []chainutil.Address) FutureNotify
 // of the outpoints which are automatically registered upon receipt of funds to
 // the address).
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use LoadTxFilter instead.
 func (c *Client) NotifyReceived(addresses []chainutil.Address) error {
@@ -1146,7 +1146,7 @@ func (r FutureRescanResult) Receive() error {
 // callback for a good callsite to reissue rescan requests on connect and
 // reconnect.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use RescanBlocksAsync instead.
 func (c *Client) RescanAsync(startBlock *chainhash.Hash,
@@ -1211,7 +1211,7 @@ func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 // callback for a good callsite to reissue rescan requests on connect and
 // reconnect.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use RescanBlocks instead.
 func (c *Client) Rescan(startBlock *chainhash.Hash,
@@ -1227,7 +1227,7 @@ func (c *Client) Rescan(startBlock *chainhash.Hash,
 //
 // See RescanEndBlock for the blocking version and more details.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use RescanBlocksAsync instead.
 func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
@@ -1289,7 +1289,7 @@ func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 //
 // See Rescan to also perform a rescan through current end of the longest chain.
 //
-// NOTE: This is a flokicoind extension and requires a websocket connection.
+// NOTE: This is a lokid extension and requires a websocket connection.
 //
 // Deprecated: Use RescanBlocks instead.
 func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
@@ -1303,14 +1303,14 @@ func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
 // FutureLoadTxFilterResult is a future promise to deliver the result
 // of a LoadTxFilterAsync RPC invocation (or an applicable error).
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a lokid extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 type FutureLoadTxFilterResult chan *Response
 
 // Receive waits for the Response promised by the future and returns an error
 // if the registration was not successful.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a lokid extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func (r FutureLoadTxFilterResult) Receive() error {
 	_, err := ReceiveFuture(r)
@@ -1323,7 +1323,7 @@ func (r FutureLoadTxFilterResult) Receive() error {
 //
 // See LoadTxFilter for the blocking version and more details.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a lokid extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func (c *Client) LoadTxFilterAsync(reload bool, addresses []chainutil.Address,
 	outPoints []wire.OutPoint) FutureLoadTxFilterResult {
@@ -1348,7 +1348,7 @@ func (c *Client) LoadTxFilterAsync(reload bool, addresses []chainutil.Address,
 // filter.  The filter is consistently updated based on inspected transactions
 // during mempool acceptance, block acceptance, and for all rescanned blocks.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrrpcclient
+// NOTE: This is a lokid extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func (c *Client) LoadTxFilter(reload bool, addresses []chainutil.Address, outPoints []wire.OutPoint) error {
 	return c.LoadTxFilterAsync(reload, addresses, outPoints).Receive()

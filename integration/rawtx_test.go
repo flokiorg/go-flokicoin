@@ -27,8 +27,8 @@ func TestTestMempoolAccept(t *testing.T) {
 	t.Parallel()
 
 	// Boilerplate codetestDir to make a pruned node.
-	flokicoindCfg := []string{"--rejectnonstd", "--debuglevel=debug"}
-	r, err := rpctest.New(&chaincfg.SimNetParams, nil, flokicoindCfg, "")
+	lokidCfg := []string{"--rejectnonstd", "--debuglevel=debug"}
+	r, err := rpctest.New(&chaincfg.SimNetParams, nil, lokidCfg, "")
 	require.NoError(t, err)
 
 	// Setup the node.

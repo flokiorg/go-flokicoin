@@ -40,7 +40,7 @@ func newOutboundServerPeer(t *testing.T, s *server, persistent bool) *serverPeer
 	t.Helper()
 
 	cfg := &peer.Config{
-		UserAgentName:    "flokicoind",
+		UserAgentName:    "lokid",
 		UserAgentVersion: "0.0.1",
 		ChainParams:      &chaincfg.MainNetParams,
 		AllowSelfConns:   true,
@@ -60,7 +60,7 @@ func newInboundServerPeer(t *testing.T, s *server) *serverPeer {
 	t.Helper()
 
 	cfg := &peer.Config{
-		UserAgentName:    "flokicoind",
+		UserAgentName:    "lokid",
 		UserAgentVersion: "0.0.1",
 		ChainParams:      &chaincfg.MainNetParams,
 		AllowSelfConns:   true,

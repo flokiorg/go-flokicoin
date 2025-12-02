@@ -45,14 +45,14 @@ func TestWalletSvrWsNtfns(t *testing.T) {
 			},
 		},
 		{
-			name: "flokicoindconnected",
+			name: "lokidconnected",
 			newNtfn: func() (interface{}, error) {
-				return chainjson.NewCmd("flokicoindconnected", true)
+				return chainjson.NewCmd("lokidconnected", true)
 			},
 			staticNtfn: func() interface{} {
 				return chainjson.NewConnectedNtfn(true)
 			},
-			marshalled: `{"jsonrpc":"1.0","method":"flokicoindconnected","params":[true],"id":null}`,
+			marshalled: `{"jsonrpc":"1.0","method":"lokidconnected","params":[true],"id":null}`,
 			unmarshalled: &chainjson.ConnectedNtfn{
 				Connected: true,
 			},

@@ -308,9 +308,9 @@ func TestMain(m *testing.M) {
 	// In order to properly test scenarios on as if we were on mainnet,
 	// ensure that non-standard transactions aren't accepted into the
 	// mempool or relayed.
-	flokicoindCfg := []string{"--rejectnonstd"}
+	lokidCfg := []string{"--rejectnonstd"}
 	primaryHarness, err = rpctest.New(
-		&chaincfg.SimNetParams, nil, flokicoindCfg, "",
+		&chaincfg.SimNetParams, nil, lokidCfg, "",
 	)
 	if err != nil {
 		fmt.Println("unable to create primary harness: ", err)
@@ -350,7 +350,7 @@ func TestRpcServer(t *testing.T) {
 	defer func() {
 		// If one of the integration tests caused a panic within the main
 		// goroutine, then tear down all the harnesses in order to avoid
-		// any leaked flokicoind processes.
+		// any leaked lokid processes.
 		if r := recover(); r != nil {
 			fmt.Println("recovering from test panic: ", r)
 			if err := rpctest.TearDownAll(); err != nil {

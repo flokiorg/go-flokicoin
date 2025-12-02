@@ -629,7 +629,7 @@ func (msg *MsgTx) flcDecode(r io.Reader, pver uint32, enc MessageEncoding,
 		}
 
 		// Check that if the witness flag is set that we actually have
-		// witnesses. This check is also done by flokicoind.
+		// witnesses. This check is also done by lokid.
 		if !msg.HasWitness() {
 			return errSuperfluousWitnessRecord
 		}

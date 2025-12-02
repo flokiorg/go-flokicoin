@@ -187,7 +187,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockchaininforesult-size_on_disk":         "The estimated size of the block and undo files on disk",
 	"getblockchaininforesult-initialblockdownload": "Estimate of whether this node is in Initial Block Download mode",
 	"getblockchaininforesult-softforks":            "The status of the super-majority soft-forks",
-	"getblockchaininforesult-unifiedsoftforks":     "The status of the super-majority soft-forks used by flokicoind on or after v0.19.0",
+	"getblockchaininforesult-unifiedsoftforks":     "The status of the super-majority soft-forks used by lokid on or after v0.19.0",
 
 	// SoftForkDescription help.
 	"softforkdescription-reject":  "The current activation status of the softfork",
@@ -203,10 +203,10 @@ var helpDescsEnUS = map[string]string{
 	"softforks-bip9_softforks--desc":  "The status of any defined BIP0009 soft-fork deployments",
 
 	// UnifiedSoftForks help.
-	"unifiedsoftforks-softforks":        "The status of the super-majority soft-forks used by flokicoind on or after v0.19.0",
+	"unifiedsoftforks-softforks":        "The status of the super-majority soft-forks used by lokid on or after v0.19.0",
 	"unifiedsoftforks-softforks--key":   "softforks",
-	"unifiedsoftforks-softforks--value": "An object describing an active softfork deployment used by flokicoind on or after v0.19.0",
-	"unifiedsoftforks-softforks--desc":  "JSON object describing an active softfork deployment used by flokicoind on or after v0.19.0",
+	"unifiedsoftforks-softforks--value": "An object describing an active softfork deployment used by lokid on or after v0.19.0",
+	"unifiedsoftforks-softforks--desc":  "JSON object describing an active softfork deployment used by lokid on or after v0.19.0",
 
 	// TxRawResult help.
 	"txrawresult-hex":           "Hex-encoded transaction",
@@ -634,9 +634,9 @@ var helpDescsEnUS = map[string]string{
 	// SendRawTransactionCmd help.
 	"sendrawtransaction--synopsis":    "Submits the serialized, hex-encoded transaction to the local peer and relays it to the network.",
 	"sendrawtransaction-hextx":        "Serialized, hex-encoded signed transaction",
-	"sendrawtransaction-feesetting":   "Whether or not to allow insanely high fees in flokicoind < v0.19.0 or the max fee rate for flokicoind v0.19.0 and later (flokicoind does not yet implement this parameter, so it has no effect)",
+	"sendrawtransaction-feesetting":   "Whether or not to allow insanely high fees in lokid < v0.19.0 or the max fee rate for lokid v0.19.0 and later (lokid does not yet implement this parameter, so it has no effect)",
 	"sendrawtransaction--result0":     "The hash of the transaction",
-	"allowhighfeesormaxfeerate-value": "Either the boolean value for the allowhighfees parameter in flokicoind < v0.19.0 or the numerical value for the maxfeerate field in flokicoind v0.19.0 and later",
+	"allowhighfeesormaxfeerate-value": "Either the boolean value for the allowhighfees parameter in lokid < v0.19.0 or the numerical value for the maxfeerate field in lokid v0.19.0 and later",
 
 	// SetGenerateCmd help.
 	"setgenerate--synopsis":    "Set the server to generate coins (mine) or not.",
@@ -650,8 +650,8 @@ var helpDescsEnUS = map[string]string{
 	"signmessagewithprivkey--result0":  "The signature of the message encoded in base 64",
 
 	// StopCmd help.
-	"stop--synopsis": "Shutdown flokicoind.",
-	"stop--result0":  "The string 'flokicoind stopping.'",
+	"stop--synopsis": "Shutdown lokid.",
+	"stop--result0":  "The string 'lokid stopping.'",
 
 	// SubmitBlockOptions help.
 	"submitblockoptions-workid": "This parameter is currently ignored",
@@ -679,7 +679,7 @@ var helpDescsEnUS = map[string]string{
 	// VerifyChainCmd help.
 	"verifychain--synopsis": "Verifies the block chain database.\n" +
 		"The actual checks performed by the checklevel parameter are implementation specific.\n" +
-		"For flokicoind this is:\n" +
+		"For lokid this is:\n" +
 		"checklevel=0 - Look up each block and ensure it can be loaded from the database.\n" +
 		"checklevel=1 - Perform basic context-free sanity checks on each block.",
 	"verifychain-checklevel": "How thorough the block verification is",
@@ -726,7 +726,7 @@ var helpDescsEnUS = map[string]string{
 	"outpoint-index": "The index of the outpoint",
 
 	// NotifySpentCmd help.
-	"notifyspent--synopsis": "Send a redeemingtx notification when a transaction spending an outpoint appears in mempool (if relayed to this flokicoind instance) and when such a transaction first appears in a newly-attached block.",
+	"notifyspent--synopsis": "Send a redeemingtx notification when a transaction spending an outpoint appears in mempool (if relayed to this lokid instance) and when such a transaction first appears in a newly-attached block.",
 	"notifyspent-outpoints": "List of transaction outpoints to monitor.",
 
 	// StopNotifySpentCmd help.

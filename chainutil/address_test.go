@@ -238,7 +238,7 @@ func TestAddresses(t *testing.T) {
 			net: &chaincfg.MainNetParams,
 		},
 		{
-			// Taken from flokicoind base58_keys_valid.
+			// Taken from lokid base58_keys_valid.
 			name:    "testnet p2sh",
 			addr:    "2NBFNJTktNa7GZusGbDbGKRZTxdK9VVez3n",
 			encoded: "2NBFNJTktNa7GZusGbDbGKRZTxdK9VVez3n",

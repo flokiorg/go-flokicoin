@@ -244,7 +244,7 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddressV2) {
 func (a *AddrManager) expireNew(bucket int) {
 	// First see if there are any entries that are so bad we can just throw
 	// them away. otherwise we throw away the oldest entry in the cache.
-	// Flokicoind here chooses four random and just throws the oldest of
+	// Lokid here chooses four random and just throws the oldest of
 	// those away, but we keep track of oldest in the initial traversal and
 	// use that information instead.
 	var oldest *KnownAddress
@@ -280,7 +280,7 @@ func (a *AddrManager) expireNew(bucket int) {
 }
 
 // pickTried selects an address from the tried bucket to be evicted.
-// We just choose the eldest. Flokicoind selects 4 random entries and throws away
+// We just choose the eldest. Lokid selects 4 random entries and throws away
 // the older of them.
 func (a *AddrManager) pickTried(bucket int) *list.Element {
 	var oldest *KnownAddress
@@ -297,7 +297,7 @@ func (a *AddrManager) pickTried(bucket int) *list.Element {
 }
 
 func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddressV2) int {
-	// flokicoind:
+	// lokid:
 	// doublesha256(key + sourcegroup + int64(doublesha256(key + group + sourcegroup))%bucket_per_source_group) % num_new_buckets
 
 	data1 := []byte{}
@@ -319,7 +319,7 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddressV2) int {
 }
 
 func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddressV2) int {
-	// flokicoind hashes this as:
+	// lokid hashes this as:
 	// doublesha256(key + group + truncate_to_64bits(doublesha256(key)) % buckets_per_group) % num_buckets
 	data1 := []byte{}
 	data1 = append(data1, a.key[:]...)
@@ -733,7 +733,7 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16,
 	// Tor v2 address is 16 char base32 + ".onion"
 	if len(host) == wire.TorV2EncodedSize && host[wire.TorV2EncodedSize-6:] == ".onion" {
 		// go base32 encoding uses capitals (as does the rfc
-		// but Tor and flokicoind tend to user lowercase, so we switch
+		// but Tor and lokid tend to user lowercase, so we switch
 		// case here.
 		data, err := base32.StdEncoding.DecodeString(
 			strings.ToUpper(host[:wire.TorV2EncodedSize-6]))

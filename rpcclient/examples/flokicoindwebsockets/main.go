@@ -32,9 +32,9 @@ func main() {
 		},
 	}
 
-	// Connect to local flokicoind RPC server using websockets.
-	flokicoindHomeDir := chainutil.AppDataDir("flokicoind", false)
-	certs, err := os.ReadFile(filepath.Join(flokicoindHomeDir, "rpc.cert"))
+	// Connect to local lokid RPC server using websockets.
+	lokidHomeDir := chainutil.AppDataDir("lokid", false)
+	certs, err := os.ReadFile(filepath.Join(lokidHomeDir, "rpc.cert"))
 	if err != nil {
 		log.Fatal(err)
 	}

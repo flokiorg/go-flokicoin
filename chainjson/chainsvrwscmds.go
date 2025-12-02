@@ -106,7 +106,7 @@ type OutPoint struct {
 // LoadTxFilterCmd defines the loadtxfilter request parameters to load or
 // reload a transaction filter.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrd/dcrjson
+// NOTE: This is a lokid extension ported from github.com/decred/dcrd/dcrjson
 // and requires a websocket connection.
 type LoadTxFilterCmd struct {
 	Reload    bool
@@ -117,7 +117,7 @@ type LoadTxFilterCmd struct {
 // NewLoadTxFilterCmd returns a new instance which can be used to issue a
 // loadtxfilter JSON-RPC command.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrd/dcrjson
+// NOTE: This is a lokid extension ported from github.com/decred/dcrd/dcrjson
 // and requires a websocket connection.
 func NewLoadTxFilterCmd(reload bool, addresses []string, outPoints []OutPoint) *LoadTxFilterCmd {
 	return &LoadTxFilterCmd{
@@ -206,7 +206,7 @@ func NewRescanCmd(beginBlock string, addresses []string, outPoints []OutPoint, e
 
 // RescanBlocksCmd defines the rescan JSON-RPC command.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrd/dcrjson
+// NOTE: This is a lokid extension ported from github.com/decred/dcrd/dcrjson
 // and requires a websocket connection.
 type RescanBlocksCmd struct {
 	// Block hashes as a string array.
@@ -216,7 +216,7 @@ type RescanBlocksCmd struct {
 // NewRescanBlocksCmd returns a new instance which can be used to issue a rescan
 // JSON-RPC command.
 //
-// NOTE: This is a flokicoind extension ported from github.com/decred/dcrd/dcrjson
+// NOTE: This is a lokid extension ported from github.com/decred/dcrd/dcrjson
 // and requires a websocket connection.
 func NewRescanBlocksCmd(blockHashes []string) *RescanBlocksCmd {
 	return &RescanBlocksCmd{BlockHashes: blockHashes}

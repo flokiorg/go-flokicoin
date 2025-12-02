@@ -18,8 +18,8 @@ from recommonmark.transform import AutoStructify
 
 # -- Project information -----------------------------------------------------
 
-project = 'flokicoind'
-copyright = '2024, flokicoind'
+project = 'lokid'
+copyright = '2024, lokid'
 author = 'flokicoin developers'
 
 # The full version, including alpha/beta/rc tags

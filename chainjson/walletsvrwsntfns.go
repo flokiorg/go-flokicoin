@@ -15,7 +15,7 @@ const (
 
 	// ConnectedNtfnMethod is the method used for notifications when
 	// a wallet server is connected to a chain server.
-	ConnectedNtfnMethod = "flokicoindconnected"
+	ConnectedNtfnMethod = "lokidconnected"
 
 	// WalletLockStateNtfnMethod is the method used to notify the lock state
 	// of a wallet has changed.
@@ -43,13 +43,13 @@ func NewAccountBalanceNtfn(account string, balance float64, confirmed bool) *Acc
 	}
 }
 
-// ConnectedNtfn defines the flokicoindconnected JSON-RPC notification.
+// ConnectedNtfn defines the lokidconnected JSON-RPC notification.
 type ConnectedNtfn struct {
 	Connected bool
 }
 
 // NewConnectedNtfn returns a new instance which can be used to issue a
-// flokicoindconnected JSON-RPC notification.
+// lokidconnected JSON-RPC notification.
 func NewConnectedNtfn(connected bool) *ConnectedNtfn {
 	return &ConnectedNtfn{
 		Connected: connected,

@@ -2,7 +2,7 @@
 *~
 
 # Databases
-flokicoind.db
+lokid.db
 *-shm
 *-wal
 
@@ -48,8 +48,8 @@ chainutil/psbt/coverage.txt
 
 # Binaries produced by "make build"
 /addblock
-/flokicoind-cli
-/flokicoind
+/lokid-cli
+/lokid
 /findcheckpoint
 /gencerts
 

@@ -1261,7 +1261,7 @@ func TestChainSvrCmds(t *testing.T) {
 				return chainjson.NewCmd("sendrawtransaction", "1122", &chainjson.AllowHighFeesOrMaxFeeRate{Value: chainjson.Float64(0.1234)})
 			},
 			staticCmd: func() interface{} {
-				return chainjson.NewFlokicoindSendRawTransactionCmd("1122", 0.1234)
+				return chainjson.NewLokiSendRawTransactionCmd("1122", 0.1234)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"sendrawtransaction","params":["1122",0.1234],"id":1}`,
 			unmarshalled: &chainjson.SendRawTransactionCmd{

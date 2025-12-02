@@ -903,11 +903,11 @@ func NewSendRawTransactionCmd(hexTx string, allowHighFees *bool) *SendRawTransac
 }
 
 // NewSendRawTransactionCmd returns a new instance which can be used to issue a
-// sendrawtransaction JSON-RPC command to a flokicoind node.
+// sendrawtransaction JSON-RPC command to a lokid node.
 // maxFeeRate is the maximum fee rate for the transaction in FLC/kvB.
 //
 // A 0 maxFeeRate indicates that a maximum fee rate won't be enforced.
-func NewFlokicoindSendRawTransactionCmd(hexTx string, maxFeeRate FLCPerkvB) *SendRawTransactionCmd {
+func NewLokiSendRawTransactionCmd(hexTx string, maxFeeRate FLCPerkvB) *SendRawTransactionCmd {
 	return &SendRawTransactionCmd{
 		HexTx: hexTx,
 		FeeSetting: &AllowHighFeesOrMaxFeeRate{

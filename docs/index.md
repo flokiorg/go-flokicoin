@@ -1,4 +1,4 @@
-# flokicoind
+# lokid
 
 ## Documentation
 
@@ -21,5 +21,5 @@ Documentation is a work-in-progress.
 
 ## License
 
-flokicoind is licensed under the [copyfree](http://copyfree.org) ISC License.
+lokid is licensed under the [copyfree](http://copyfree.org) ISC License.
 

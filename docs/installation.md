@@ -1,6 +1,6 @@
 # Installation
 
-The first step is to install flokicoind.  See one of the following sections for
+The first step is to install lokid.  See one of the following sections for
 details on how to install on the supported operating systems.
 
 ## Requirements
@@ -10,15 +10,15 @@ details on how to install on the supported operating systems.
 
 ## Windows Installation
 
-Currently, there is no MSI installer available for flokicoin. The `flokicoind` executable can be directly downloaded from the latest release page:
+Currently, there is no MSI installer available for flokicoin. The `lokid` executable can be directly downloaded from the latest release page:
 
-[flokicoind Releases](https://github.com/flokiorg/go-flokicoin/releases)
+[lokid Releases](https://github.com/flokiorg/go-flokicoin/releases)
 
 ### Instructions:
 
-1. **Download** the executable (`flokicoind.exe`) from the provided release link.
+1. **Download** the executable (`lokid.exe`) from the provided release link.
 2. **Place** the executable in your preferred directory.
-3. **Launch** `flokicoind.exe` by double-clicking the file or executing it via Command Prompt.
+3. **Launch** `lokid.exe` by double-clicking the file or executing it via Command Prompt.
 
 > **Note:** An official MSI installer is planned and will be available in an upcoming release.
 
@@ -37,7 +37,7 @@ recommended that `GOPATH` is set to a directory in your home directory such as
 `~/goprojects` to avoid write permission issues.  It is also recommended to add
 `$GOPATH/bin` to your `PATH` at this point.
 
-* Run the following commands to obtain flokicoind, all dependencies, and install it:
+* Run the following commands to obtain lokid, all dependencies, and install it:
 
 ```bash
 git clone https://github.com/flokiorg/go-flokicoin $GOPATH/src/github.com/flokiorg/go-flokicoin
@@ -45,14 +45,14 @@ cd $GOPATH/src/github.com/flokiorg/go-flokicoin
 go install -v . ./cmd/...
 ```
 
-* flokicoind (and utilities) will now be installed in ```$GOPATH/bin```.  If you did
+* lokid (and utilities) will now be installed in ```$GOPATH/bin```.  If you did
   not already add the bin directory to your system path during Go installation,
   we recommend you do so now.
 
 
 ## Startup
 
-Typically flokicoind will run and start downloading the block chain with no extra
+Typically lokid will run and start downloading the block chain with no extra
 configuration necessary, however, there is an optional method to use a
 `bootstrap.dat` file that may speed up the initial block chain download process.
 

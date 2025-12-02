@@ -64,7 +64,7 @@ const (
 var (
 	// userAgentName is the user agent name and is used to help identify
 	// ourselves to other flokicoin peers.
-	userAgentName = "flokicoind"
+	userAgentName = "lokid"
 
 	// userAgentVersion is the user agent version and is used to help
 	// identify ourselves to other flokicoin peers.
@@ -1356,7 +1356,7 @@ func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 	// Add addresses to server address manager.  The address manager handles
 	// the details of things such as preventing duplicate addresses, max
 	// addresses, and last seen updates.
-	// XXX flokicoind gives a 2 hour time penalty here, do we want to do the
+	// XXX lokid gives a 2 hour time penalty here, do we want to do the
 	// same?
 	sp.server.addrManager.AddAddresses(addrs, sp.NA())
 }
@@ -2271,7 +2271,7 @@ func (s *server) peerHandler() {
 		// Add peers discovered through DNS to the address manager.
 		connmgr.SeedFromDNS(activeNetParams.Params, defaultRequiredServices,
 			lookup, func(addrs []*wire.NetAddressV2) {
-				// Flokicoind uses a lookup of the dns seeder here. This
+				// Lokid uses a lookup of the dns seeder here. This
 				// is rather strange since the values looked up by the
 				// DNS seed lookups will vary quite a lot.
 				// to replicate this behaviour we put all addresses as
@@ -2650,7 +2650,7 @@ out:
 			// listen port?
 			// XXX this assumes timeout is in seconds.
 			listenPort, err := s.nat.AddPortMapping("tcp", int(lport), int(lport),
-				"flokicoind listen port", 20*60)
+				"lokid listen port", 20*60)
 			if err != nil {
 				srvrLog.Warnf("can't add UPnP port mapping: %v", err)
 			}
@@ -2737,7 +2737,7 @@ func setupRPCListeners() ([]net.Listener, error) {
 	return listeners, nil
 }
 
-// newServer returns a new flokicoind server configured to listen on addr for the
+// newServer returns a new lokid server configured to listen on addr for the
 // flokicoin network type specified by chainParams.  Use start to begin accepting
 // connections from peers.
 func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,

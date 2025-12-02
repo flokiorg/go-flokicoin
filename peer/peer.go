@@ -1416,7 +1416,7 @@ out:
 			// Since the protocol version is 70016 but we don't
 			// implement compact blocks, we have to ignore unknown
 			// messages after the version-verack handshake. This
-			// matches flokicoind's behavior and is necessary since
+			// matches lokid's behavior and is necessary since
 			// compact blocks negotiation occurs after the
 			// handshake.
 			if err == wire.ErrUnknownMessage {

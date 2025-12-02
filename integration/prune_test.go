@@ -21,8 +21,8 @@ func TestPrune(t *testing.T) {
 	t.Parallel()
 
 	// Boilerplate code to make a pruned node.
-	flokicoindCfg := []string{"--prune=1536"}
-	r, err := rpctest.New(&chaincfg.SimNetParams, nil, flokicoindCfg, "")
+	lokidCfg := []string{"--prune=1536"}
+	r, err := rpctest.New(&chaincfg.SimNetParams, nil, lokidCfg, "")
 	require.NoError(t, err)
 
 	if err := r.SetUp(false, 0); err != nil {

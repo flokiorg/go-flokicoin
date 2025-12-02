@@ -19,16 +19,16 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 	if !ok {
 		t.Fatalf("Failed finding config file path")
 	}
-	sampleConfigFile := filepath.Join(filepath.Dir(path), "config", "sample-flokicoind.conf")
+	sampleConfigFile := filepath.Join(filepath.Dir(path), "config", "sample-lokid.conf")
 
 	// Setup a temporary directory
-	tmpDir, err := os.MkdirTemp("", "flokicoind")
+	tmpDir, err := os.MkdirTemp("", "lokid")
 	if err != nil {
 		t.Fatalf("Failed creating a temporary directory: %v", err)
 	}
 	testpath := filepath.Join(tmpDir, "test.conf")
 
-	// copy config file to location of flokicoind binary
+	// copy config file to location of lokid binary
 	data, err := os.ReadFile(sampleConfigFile)
 	if err != nil {
 		t.Fatalf("Failed reading sample config file: %v", err)
@@ -37,7 +37,7 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed obtaining app path: %v", err)
 	}
-	tmpConfigFile := filepath.Join(appPath, "sample-flokicoind.conf")
+	tmpConfigFile := filepath.Join(appPath, "sample-lokid.conf")
 	err = os.WriteFile(tmpConfigFile, data, 0644)
 	if err != nil {
 		t.Fatalf("Failed copying sample config file: %v", err)

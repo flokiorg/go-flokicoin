@@ -16,7 +16,7 @@ import (
 	"github.com/flokiorg/go-flokicoin/chainjson"
 )
 
-// TestExtCmds tests all of the flokicoind extended commands marshal and unmarshal
+// TestExtCmds tests all of the lokid extended commands marshal and unmarshal
 // into valid results include handling of optional fields being omitted in the
 // marshalled command, while optional fields with defaults have the default
 // assigned on unmarshalled commands.

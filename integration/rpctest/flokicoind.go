@@ -19,22 +19,22 @@ var (
 	compileMtx sync.Mutex
 
 	// executablePath is the path to the compiled executable. This is the empty
-	// string until flokicoind is compiled. This should not be accessed directly;
-	// instead use the function flokicoindExecutablePath().
+	// string until lokid is compiled. This should not be accessed directly;
+	// instead use the function lokidExecutablePath().
 	executablePath string
 )
 
-// flokicoindExecutablePath returns a path to the flokicoind executable to be used by
+// lokidExecutablePath returns a path to the lokid executable to be used by
 // rpctests. To ensure the code tests against the most up-to-date version of
-// flokicoind, this method compiles flokicoind the first time it is called. After that, the
+// lokid, this method compiles lokid the first time it is called. After that, the
 // generated binary is used for subsequent test harnesses. The executable file
 // is not cleaned up, but since it lives at a static path in a temp directory,
 // it is not a big deal.
-func flokicoindExecutablePath() (string, error) {
+func lokidExecutablePath() (string, error) {
 	compileMtx.Lock()
 	defer compileMtx.Unlock()
 
-	// If flokicoind has already been compiled, just use that.
+	// If lokid has already been compiled, just use that.
 	if len(executablePath) != 0 {
 		return executablePath, nil
 	}
@@ -44,8 +44,8 @@ func flokicoindExecutablePath() (string, error) {
 		return "", err
 	}
 
-	// Build flokicoind and output an executable in a static temp path.
-	outputPath := filepath.Join(testDir, "flokicoind")
+	// Build lokid and output an executable in a static temp path.
+	outputPath := filepath.Join(testDir, "lokid")
 	if runtime.GOOS == "windows" {
 		outputPath += ".exe"
 	}
@@ -54,7 +54,7 @@ func flokicoindExecutablePath() (string, error) {
 	)
 	err = cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("Failed to build flokicoind: %v", err)
+		return "", fmt.Errorf("Failed to build lokid: %v", err)
 	}
 
 	// Save executable path so future calls do not recompile.

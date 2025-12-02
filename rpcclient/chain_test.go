@@ -27,26 +27,26 @@ func TestUnmarshalGetBlockChainInfoResultSoftForks(t *testing.T) {
 		compatible bool
 	}{
 		{
-			name:       "flokicoind < 0.19.0 with separate softforks",
-			version:    FlokicoindPre19,
+			name:       "lokid < 0.19.0 with separate softforks",
+			version:    LokidPre19,
 			res:        []byte(`{"softforks": [{"version": 2}]}`),
 			compatible: true,
 		},
 		{
-			name:       "flokicoind >= 0.19.0 with separate softforks",
-			version:    FlokicoindPre22,
+			name:       "lokid >= 0.19.0 with separate softforks",
+			version:    LokidPre22,
 			res:        []byte(`{"softforks": [{"version": 2}]}`),
 			compatible: false,
 		},
 		{
-			name:       "flokicoind < 0.19.0 with unified softforks",
-			version:    FlokicoindPre19,
+			name:       "lokid < 0.19.0 with unified softforks",
+			version:    LokidPre19,
 			res:        []byte(`{"softforks": {"segwit": {"type": "bip9"}}}`),
 			compatible: false,
 		},
 		{
-			name:       "flokicoind >= 0.19.0 with unified softforks",
-			version:    FlokicoindPre22,
+			name:       "lokid >= 0.19.0 with unified softforks",
+			version:    LokidPre22,
 			res:        []byte(`{"softforks": {"segwit": {"type": "bip9"}}}`),
 			compatible: true,
 		},
@@ -88,11 +88,11 @@ func TestUnmarshalGetBlockChainInfoResultSoftForks(t *testing.T) {
 
 			// If the version is compatible with the response, we
 			// should expect to see the proper softforks field set.
-			if test.version == FlokicoindPre22 &&
+			if test.version == LokidPre22 &&
 				info.SoftForks != nil {
 				t.Fatal("expected SoftForks to be empty")
 			}
-			if test.version == FlokicoindPre19 &&
+			if test.version == LokidPre19 &&
 				info.UnifiedSoftForks != nil {
 				t.Fatal("expected UnifiedSoftForks to be empty")
 			}

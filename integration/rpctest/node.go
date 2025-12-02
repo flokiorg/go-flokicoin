@@ -18,7 +18,7 @@ import (
 	rpc "github.com/flokiorg/go-flokicoin/rpcclient"
 )
 
-// nodeConfig contains all the args, and data required to launch a flokicoind process
+// nodeConfig contains all the args, and data required to launch a lokid process
 // and connect the rpc client to it.
 type nodeConfig struct {
 	rpcUser    string
@@ -44,14 +44,14 @@ type nodeConfig struct {
 func newConfig(nodeDir, certFile, keyFile string, extra []string,
 	customExePath string) (*nodeConfig, error) {
 
-	var flokicoindPath string
+	var lokidPath string
 	if customExePath != "" {
-		flokicoindPath = customExePath
+		lokidPath = customExePath
 	} else {
 		var err error
-		flokicoindPath, err = flokicoindExecutablePath()
+		lokidPath, err = lokidExecutablePath()
 		if err != nil {
-			flokicoindPath = "flokicoind"
+			lokidPath = "lokid"
 		}
 	}
 
@@ -62,7 +62,7 @@ func newConfig(nodeDir, certFile, keyFile string, extra []string,
 		rpcPass:   "pass",
 		extra:     extra,
 		nodeDir:   nodeDir,
-		exe:       flokicoindPath,
+		exe:       lokidPath,
 		endpoint:  "ws",
 		certFile:  certFile,
 		keyFile:   keyFile,
@@ -87,7 +87,7 @@ func (n *nodeConfig) setDefaults() error {
 	return nil
 }
 
-// arguments returns an array of arguments that be used to launch the flokicoind
+// arguments returns an array of arguments that be used to launch the lokid
 // process.
 func (n *nodeConfig) arguments() []string {
 	args := []string{}
@@ -135,13 +135,13 @@ func (n *nodeConfig) arguments() []string {
 	return args
 }
 
-// command returns the exec.Cmd which will be used to start the flokicoind process.
+// command returns the exec.Cmd which will be used to start the lokid process.
 func (n *nodeConfig) command() *exec.Cmd {
 	return exec.Command(n.exe, n.arguments()...)
 }
 
 // rpcConnConfig returns the rpc connection config that can be used to connect
-// to the flokicoind process that is launched via Start().
+// to the lokid process that is launched via Start().
 func (n *nodeConfig) rpcConnConfig() rpc.ConnConfig {
 	return rpc.ConnConfig{
 		Host:                 n.rpcListen,
@@ -159,7 +159,7 @@ func (n *nodeConfig) String() string {
 }
 
 // node houses the necessary state required to configure, launch, and manage a
-// flokicoind process.
+// lokid process.
 type node struct {
 	config *nodeConfig
 
@@ -171,7 +171,7 @@ type node struct {
 
 // newNode creates a new node instance according to the passed config. dataDir
 // will be used to hold a file recording the pid of the launched process, and
-// as the base for the log and data directories for flokicoind.
+// as the base for the log and data directories for lokid.
 func newNode(config *nodeConfig, dataDir string) (*node, error) {
 	return &node{
 		config:  config,
@@ -180,7 +180,7 @@ func newNode(config *nodeConfig, dataDir string) (*node, error) {
 	}, nil
 }
 
-// start creates a new flokicoind process, and writes its pid in a file reserved for
+// start creates a new lokid process, and writes its pid in a file reserved for
 // recording the pid of the launched process. This file can be used to
 // terminate the process in case of a hang, or panic. In the case of a failing
 // test case, or panic, it is important that the process be stopped via stop(),
@@ -190,7 +190,7 @@ func (n *node) start() error {
 		return err
 	}
 
-	pid, err := os.Create(filepath.Join(n.dataDir, "flokicoind.pid"))
+	pid, err := os.Create(filepath.Join(n.dataDir, "lokid.pid"))
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func (n *node) start() error {
 	return nil
 }
 
-// stop interrupts the running flokicoind process process, and waits until it exits
+// stop interrupts the running lokid process process, and waits until it exits
 // properly. On windows, interrupt is not supported, so a kill signal is used
 // instead
 func (n *node) stop() error {
@@ -240,7 +240,7 @@ func (n *node) cleanup() error {
 	return nil
 }
 
-// shutdown terminates the running flokicoind process, and cleans up all
+// shutdown terminates the running lokid process, and cleans up all
 // file/directories created by node.
 func (n *node) shutdown() error {
 	if err := n.stop(); err != nil {
