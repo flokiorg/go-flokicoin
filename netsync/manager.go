@@ -372,7 +372,7 @@ func (sm *SyncManager) startSync() {
 			log.Infof("Downloading headers for blocks %d to "+
 				"%d from peer %s", best.Height+1,
 				sm.nextCheckpoint.Height, bestPeer.Addr())
-		} else {
+		} else if !sm.current() {
 			bestPeer.PushGetBlocksMsg(locator, &zeroHash)
 		}
 		sm.syncPeer = bestPeer
@@ -1275,7 +1275,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			// inventory message, so force a request for more.  This
 			// should only happen if we're on a really long side
 			// chain.
-			if i == lastBlock {
+			if i == lastBlock && !sm.current() && peer == sm.syncPeer {
 				// Request blocks after this one up to the
 				// final one the remote peer knows about (zero
 				// stop hash).
