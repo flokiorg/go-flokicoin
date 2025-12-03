@@ -324,22 +324,28 @@ var MainNetParams = Params{
 		{17254, newHashFromStr("880341509f7d01e697239599e5e07fc0a0568a01a6ddcb3ec8d06f6452815221")},
 		{20390, newHashFromStr("90e1fef1e32187e6c5256412e2c496b1020d9a10d972cd38c4b8f89d61c6263c")},
 		{23865, newHashFromStr("b636660d20743bb1debd0b3254c5117a11b1ed9c8a66aa267b23e76419e606c8")},
+
+		{57412, newHashFromStr("63f30e2963aa216f280d99886b2d17384db8df9eb80946d6d7c8f66b4ef9bb06")},
+		{93688, newHashFromStr("a56af58179e5d84be181aa3c962773ccc0c8e9a3235162ab19444f9476498d8f")},
+		{128443, newHashFromStr("042b1ad842dc4c3abb86b067151352a2b09cd3bd916a3961c8cc41e5369cccc9")},
+		{167902, newHashFromStr("7dddc7714ecb2bb8e99676fe4e1a810e51e5b4c412ece2b600b5a81b46eb5bf5")},
+		{209771, newHashFromStr("43a0a4fe88a45567302803d6d8db2579309ac67514954cefc9b68e341e0e1802")},
 	},
 
-    // Consensus rule change deployments.
-    //
-    // Version-bits signaling guidelines for BitNumber to avoid overlap:
-    // - Allowed: 0–7, 9–15, 22–28
-    // - Reserved: 8 (AuxPoW flag), 16–21 (ChainID field), 29–31 (vbTopBits marker)
-    //
-    // The miner confirmation window is defined as:
-    //   target proof of work timespan / target proof of work spacing
+	// Consensus rule change deployments.
+	//
+	// Version-bits signaling guidelines for BitNumber to avoid overlap:
+	// - Allowed: 0–7, 9–15, 22–28
+	// - Reserved: 8 (AuxPoW flag), 16–21 (ChainID field), 29–31 (vbTopBits marker)
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 6840, // 95% of MinerConfirmationWindow
 	MinerConfirmationWindow:       7200, // 5 days
-    // Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
-    // Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
-    // Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
-    Deployments: [DefinedDeployments]ConsensusDeployment{
+	// Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
+	// Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
+	// Version-bits BitNumber: Allowed 0–7, 9–15, 22–28; Reserved 8, 16–21, 29–31
+	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
 			DeploymentStarter: NewMedianTimeDeploymentStarter(
@@ -558,11 +564,11 @@ var TestNet3Params = Params{
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},
 
-    // Consensus rule change deployments.
-    // For testnet, auto-activate deployments without signalling by
-    // setting a 1-block window and 0 threshold.
-    RuleChangeActivationThreshold: 0,
-    MinerConfirmationWindow:       1,
+	// Consensus rule change deployments.
+	// For testnet, auto-activate deployments without signalling by
+	// setting a 1-block window and 0 threshold.
+	RuleChangeActivationThreshold: 0,
+	MinerConfirmationWindow:       1,
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber: 28,
@@ -582,33 +588,33 @@ var TestNet3Params = Params{
 				time.Time{}, // Never expires
 			),
 		},
-        DeploymentCSV: {
-            BitNumber: 0,
-            DeploymentStarter: NewMedianTimeDeploymentStarter(
-                time.Time{}, // Always available for vote
-            ),
-            DeploymentEnder: NewMedianTimeDeploymentEnder(
-                time.Time{}, // Always available for vote
-            ),
-        },
-        DeploymentSegwit: {
-            BitNumber: 1,
-            DeploymentStarter: NewMedianTimeDeploymentStarter(
-                time.Time{}, // Always available for vote
-            ),
-            DeploymentEnder: NewMedianTimeDeploymentEnder(
-                time.Time{}, // Always available for vote
-            ),
-        },
-        DeploymentTaproot: {
-            BitNumber: 2,
-            DeploymentStarter: NewMedianTimeDeploymentStarter(
-                time.Time{}, // Always available for vote
-            ),
-            DeploymentEnder: NewMedianTimeDeploymentEnder(
-                time.Time{}, // Always available for vote
-            ),
-        },
+		DeploymentCSV: {
+			BitNumber: 0,
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Time{}, // Always available for vote
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Time{}, // Always available for vote
+			),
+		},
+		DeploymentSegwit: {
+			BitNumber: 1,
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Time{}, // Always available for vote
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Time{}, // Always available for vote
+			),
+		},
+		DeploymentTaproot: {
+			BitNumber: 2,
+			DeploymentStarter: NewMedianTimeDeploymentStarter(
+				time.Time{}, // Always available for vote
+			),
+			DeploymentEnder: NewMedianTimeDeploymentEnder(
+				time.Time{}, // Always available for vote
+			),
+		},
 	},
 
 	// AuxPoW parameters
