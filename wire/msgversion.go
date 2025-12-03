@@ -18,7 +18,7 @@ import (
 const MaxUserAgentLen = 256
 
 // DefaultUserAgent for wire in the stack
-const DefaultUserAgent = "/wire:0.1.0/"
+const DefaultUserAgent = "/"
 
 // MsgVersion implements the Message interface and represents a flokicoin version
 // message.  It is used for a peer to advertise itself as soon as an outbound
