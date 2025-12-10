@@ -2532,13 +2532,11 @@ func (s *server) Stop() error {
 		s.rpcServer.Stop()
 	}
 
-	// Save fee estimator state in the database.
-	s.db.Update(func(tx database.Tx) error {
-		metadata := tx.Metadata()
-		metadata.Put(mempool.EstimateFeeDatabaseKey, s.feeEstimator.Save())
-
-		return nil
-	})
+	// Save fee estimator state to disk.
+	feePath := mempool.FeeEstimatesPath(cfg.DataDir)
+	if err := mempool.SaveFeeEstimatorToFile(feePath, s.feeEstimator, time.Now()); err != nil {
+		srvrLog.Warnf("Unable to persist fee estimator: %v", err)
+	}
 
 	// Signal the remaining goroutines to quit.
 	close(s.quit)
@@ -2867,30 +2865,8 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 		return nil, err
 	}
 
-	// Search for a FeeEstimator state in the database. If none can be found
-	// or if it cannot be loaded, create a new one.
-	db.Update(func(tx database.Tx) error {
-		metadata := tx.Metadata()
-		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
-		if feeEstimationData != nil {
-			// delete it from the database so that we don't try to restore the
-			// same thing again somehow.
-			metadata.Delete(mempool.EstimateFeeDatabaseKey)
-
-			// If there is an error, log it and make a new fee estimator.
-			var err error
-			s.feeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
-
-			if err != nil {
-				peerLog.Errorf("Failed to restore fee estimator %v", err)
-			}
-		}
-
-		return nil
-	})
-
-	// If no feeEstimator has been found, or if the one that has been found
-	// is behind somehow, create a new one and start over.
+	feeEstimatesPath := mempool.FeeEstimatesPath(cfg.DataDir)
+	s.feeEstimator, _ = mempool.LoadFeeEstimatorFromFile(feeEstimatesPath, false)
 	if s.feeEstimator == nil || s.feeEstimator.LastKnownHeight() != s.chain.BestSnapshot().Height {
 		s.feeEstimator = mempool.NewFeeEstimator(
 			mempool.DefaultEstimateFeeMaxRollback,
