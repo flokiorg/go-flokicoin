@@ -54,8 +54,9 @@ type TxMempool interface {
 	// When the removeRedeemers flag is set, any transactions that redeem
 	// outputs from the removed transaction will also be removed
 	// recursively from the mempool, as they would otherwise become
-	// orphans.
-	RemoveTransaction(tx *chainutil.Tx, removeRedeemers bool)
+	// orphans. The reason is provided so fee estimation can account for
+	// unconfirmed removals.
+	RemoveTransaction(tx *chainutil.Tx, removeRedeemers bool, reason RemovalReason)
 
 	// CheckMempoolAcceptance behaves similarly to lokid's
 	// `testmempoolaccept` RPC method. It will perform a series of checks

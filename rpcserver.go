@@ -915,12 +915,21 @@ func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan stru
 		}
 	}
 
-	// if c.EstimateMode != &chainjson.EstimateModeConservative {
-	// 	return -1.0, &chainjson.RPCError{
-	// 		Code:    chainjson.ErrRPCInternal.Code,
-	// 		Message: "Only the conservative mode is supported for fee estimation.",
-	// 	}
-	// }
+	mode := chainjson.EstimateModeConservative
+	if c.EstimateMode != nil {
+		switch *c.EstimateMode {
+		case chainjson.EstimateModeConservative, chainjson.EstimateModeUnset:
+			mode = chainjson.EstimateModeConservative
+		case chainjson.EstimateModeEconomical:
+			mode = chainjson.EstimateModeEconomical
+		default:
+			return nil, &chainjson.RPCError{
+				Code:    chainjson.ErrRPCInternal.Code,
+				Message: "invalid estimate mode",
+			}
+		}
+	}
+	_ = mode
 
 	feeRate, err := s.cfg.FeeEstimator.EstimateFee(uint32(c.ConfTarget))
 
@@ -945,6 +954,7 @@ func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan stru
 	return &chainjson.EstimateSmartFeeResult{
 		FeeRate: &rate,
 		Blocks:  c.ConfTarget,
+		Errors:  nil,
 	}, nil
 }
 
@@ -4073,7 +4083,7 @@ func handleSendRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan st
 	// Also, since an error is being returned to the caller, ensure the
 	// transaction is removed from the memory pool.
 	if len(acceptedTxs) == 0 || !acceptedTxs[0].Tx.Hash().IsEqual(tx.Hash()) {
-		s.cfg.TxMemPool.RemoveTransaction(tx, true)
+		s.cfg.TxMemPool.RemoveTransaction(tx, true, mempool.RemovalReasonRejected)
 
 		errStr := fmt.Sprintf("transaction %v is not in accepted list",
 			tx.Hash())

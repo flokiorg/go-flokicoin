@@ -476,20 +476,30 @@ func (mp *TxPool) HaveTransaction(hash *chainhash.Hash) bool {
 // RemoveTransaction.  See the comment for RemoveTransaction for more details.
 //
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *TxPool) removeTransaction(tx *chainutil.Tx, removeRedeemers bool) {
+func (mp *TxPool) removeTransaction(tx *chainutil.Tx, removeRedeemers bool, reason RemovalReason) {
 	txHash := tx.Hash()
 	if removeRedeemers {
 		// Remove any transactions which rely on this one.
 		for i := uint32(0); i < uint32(len(tx.MsgTx().TxOut)); i++ {
 			prevOut := wire.OutPoint{Hash: *txHash, Index: i}
 			if txRedeemer, exists := mp.outpoints[prevOut]; exists {
-				mp.removeTransaction(txRedeemer, true)
+				mp.removeTransaction(txRedeemer, true, reason)
 			}
 		}
 	}
 
 	// Remove the transaction if needed.
 	if txDesc, exists := mp.pool[*txHash]; exists {
+		// Inform the fee estimator about an unmined removal so it can
+		// count failures appropriately.
+		if mp.cfg.FeeEstimator != nil {
+			bestHeight := int32(0)
+			if mp.cfg.BestHeight != nil {
+				bestHeight = mp.cfg.BestHeight()
+			}
+			mp.cfg.FeeEstimator.NotifyTxRemoval(txDesc, reason, bestHeight)
+		}
+
 		// Remove unconfirmed address index entries associated with the
 		// transaction if enabled.
 		if mp.cfg.AddrIndex != nil {
@@ -511,10 +521,10 @@ func (mp *TxPool) removeTransaction(tx *chainutil.Tx, removeRedeemers bool) {
 // they would otherwise become orphans.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) RemoveTransaction(tx *chainutil.Tx, removeRedeemers bool) {
+func (mp *TxPool) RemoveTransaction(tx *chainutil.Tx, removeRedeemers bool, reason RemovalReason) {
 	// Protect concurrent access.
 	mp.mtx.Lock()
-	mp.removeTransaction(tx, removeRedeemers)
+	mp.removeTransaction(tx, removeRedeemers, reason)
 	mp.mtx.Unlock()
 }
 
@@ -531,7 +541,7 @@ func (mp *TxPool) RemoveDoubleSpends(tx *chainutil.Tx) {
 	for _, txIn := range tx.MsgTx().TxIn {
 		if txRedeemer, ok := mp.outpoints[txIn.PreviousOutPoint]; ok {
 			if !txRedeemer.Hash().IsEqual(tx.Hash()) {
-				mp.removeTransaction(txRedeemer, true)
+				mp.removeTransaction(txRedeemer, true, RemovalReasonConflict)
 			}
 		}
 	}
@@ -962,7 +972,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *chainutil.Tx, isNew, rateLimit,
 		// The conflict set should already include the descendants for
 		// each one, so we don't need to remove the redeemers within
 		// this call as they'll be removed eventually.
-		mp.removeTransaction(conflict, false)
+		mp.removeTransaction(conflict, false, RemovalReasonConflict)
 	}
 	txD := mp.addTransaction(r.utxoView, tx, r.bestHeight, int64(r.TxFee))
 

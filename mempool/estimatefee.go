@@ -28,7 +28,7 @@ import (
 const (
 	// estimateFeeDepth is the maximum number of blocks before a transaction
 	// is confirmed that we want to track.
-	estimateFeeDepth = 25
+	estimateFeeDepth = 1008
 
 	// estimateFeeBinSize is the number of txs stored in each bin.
 	estimateFeeBinSize = 100
@@ -49,12 +49,6 @@ const (
 	bytePerKb = 1000
 
 	flcPerLoki = 1e-8
-)
-
-var (
-	// EstimateFeeDatabaseKey is the key that we use to
-	// store the fee estimator in the database.
-	EstimateFeeDatabaseKey = []byte("estimatefee")
 )
 
 // LokiPerByte is number with units of lokis per byte.
@@ -217,6 +211,44 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 			observed: t.Height,
 			mined:    mining.UnminedHeight,
 		}
+	}
+}
+
+// NotifyTxRemoval informs the estimator that a transaction has left the mempool
+// without confirming. This allows the estimator to drop stale observations.
+func (ef *FeeEstimator) NotifyTxRemoval(t *TxDesc, reason RemovalReason, bestHeight int32) {
+	if ef == nil {
+		return
+	}
+
+	// Only care about non-block removals.
+	if reason == RemovalReasonBlock {
+		return
+	}
+
+	ef.mtx.Lock()
+	defer ef.mtx.Unlock()
+
+	hash := *t.Tx.Hash()
+	if _, ok := ef.observed[hash]; ok {
+		delete(ef.observed, hash)
+	}
+
+	// If a transaction stuck around for too long, also clear it out of any
+	// bins it might have been promoted into.
+	if bestHeight == mining.UnminedHeight {
+		return
+	}
+	for i := range ef.bin {
+		b := ef.bin[i]
+		filtered := b[:0]
+		for _, ot := range b {
+			if ot.hash == hash && ot.mined == mining.UnminedHeight && bestHeight-ot.observed >= estimateFeeDepth {
+				continue
+			}
+			filtered = append(filtered, ot)
+		}
+		ef.bin[i] = filtered
 	}
 }
 
@@ -489,7 +521,7 @@ func (b *estimateFeeSet) estimateFee(confirmations int) LokiPerByte {
 	}
 
 	if confirmations > estimateFeeDepth {
-		return 0
+		confirmations = estimateFeeDepth
 	}
 
 	// We don't have any transactions!
@@ -571,9 +603,7 @@ func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (FlcPerKilobyte, error) {
 	}
 
 	if numBlocks > estimateFeeDepth {
-		return -1, fmt.Errorf(
-			"can only estimate fees for up to %d blocks from now",
-			estimateFeeDepth)
+		numBlocks = estimateFeeDepth
 	}
 
 	// If there are no cached results, generate them.

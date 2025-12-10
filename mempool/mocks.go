@@ -90,9 +90,9 @@ func (m *MockTxMempool) ProcessTransaction(tx *chainutil.Tx, allowOrphan,
 // removed transaction will also be removed recursively from the mempool, as
 // they would otherwise become orphans.
 func (m *MockTxMempool) RemoveTransaction(tx *chainutil.Tx,
-	removeRedeemers bool) {
+	removeRedeemers bool, reason RemovalReason) {
 
-	m.Called(tx, removeRedeemers)
+	m.Called(tx, removeRedeemers, reason)
 }
 
 // CheckMempoolAcceptance behaves similarly to lokid's `testmempoolaccept`
