@@ -1,6 +1,6 @@
 module github.com/flokiorg/go-flokicoin
 
-go 1.23.4
+go 1.26.1
 
 require (
 	github.com/aead/siphash v1.0.1
