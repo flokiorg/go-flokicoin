@@ -645,12 +645,12 @@ var TestNet3Params = Params{
 	HDCoinType: 1,
 }
 
-// TestNet4Params defines the network parameters for the test Bitcoin network
+// TestNet4Params defines the network parameters for the test Flokicoin network
 // (version 4).
 var TestNet4Params = Params{
 	Name:        "testnet4",
 	Net:         wire.TestNet4,
-	DefaultPort: "48333",
+	DefaultPort: "65212",
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
