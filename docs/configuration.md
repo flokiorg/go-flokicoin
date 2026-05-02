@@ -81,16 +81,16 @@ Command Line Examples:
 |--rpclisten=|all interfaces on default port which is changed by `--testnet`|
 |--rpclisten=0.0.0.0|all IPv4 interfaces on default port which is changed by `--testnet`|
 |--rpclisten=::|all IPv6 interfaces on default port which is changed by `--testnet`|
-|--rpclisten=:15216|all interfaces on port 15216|
-|--rpclisten=0.0.0.0:15216|all IPv4 interfaces on port 15216|
-|--rpclisten=[::]:15216|all IPv6 interfaces on port 15216|
-|--rpclisten=127.0.0.1:15216|only IPv4 localhost on port 15216|
-|--rpclisten=[::1]:15216|only IPv6 localhost on port 15216|
+|--rpclisten=:15213|all interfaces on port 15213|
+|--rpclisten=0.0.0.0:15213|all IPv4 interfaces on port 15213|
+|--rpclisten=[::]:15213|all IPv6 interfaces on port 15213|
+|--rpclisten=127.0.0.1:15213|only IPv4 localhost on port 15213|
+|--rpclisten=[::1]:15213|only IPv6 localhost on port 15213|
 |--rpclisten=:8336|all interfaces on non-standard port 8336|
 |--rpclisten=0.0.0.0:8336|all IPv4 interfaces on non-standard port 8336|
 |--rpclisten=[::]:8336|all IPv6 interfaces on non-standard port 8336|
-|--rpclisten=127.0.0.1:8337 --listen=[::1]:15216|IPv4 localhost on port 8337 and IPv6 localhost on port 15216|
-|--rpclisten=:15216 --listen=:8337|all interfaces on ports 15216 and 8337|
+|--rpclisten=127.0.0.1:8337 --listen=[::1]:15213|IPv4 localhost on port 8337 and IPv6 localhost on port 15213|
+|--rpclisten=:15213 --listen=:8337|all interfaces on ports 15213 and 8337|
 
 The following config file would configure the lokid RPC server to listen to all interfaces on the default port, including external interfaces, for both IPv4 and IPv6:
 
@@ -106,28 +106,32 @@ While lokid is highly configurable when it comes to the network configuration,
 the following is intended to be a quick reference for the default ports used so
 port forwarding can be configured as required.
 
-lokid provides a `--upnp` flag which can be used to automatically map the bitcoin
+lokid provides a `--upnp` flag which can be used to automatically map the flokicoin
 peer-to-peer listening port if your router supports UPnP.  If your router does
-not support UPnP, or you don't wish to use it, please note that only the bitcoin
+not support UPnP, or you don't wish to use it, please note that only the flokicoin
 peer-to-peer port should be forwarded unless you specifically want to allow RPC
 access to your lokid from external sources such as in more advanced network
 configurations.
 
-|Name|Port|
-|----|----|
-|Default Bitcoin peer-to-peer port|TCP 15212|
-|Default RPC port|TCP 15216|
+| Network | P2P Port | RPC Port |
+|---|---|---|
+| MainNet | 15212 | 15213 |
+| RegTest | 25212 | 25213 |
+| TestNet3 | 35212 | 35213 |
+| TestNet4 | 65212 | 65213 |
+| SimNet | 45212 | 45213 |
+| SigNet | 55212 | 55213 |
 
 ## Using bootstrap.dat
 
 ### What is bootstrap.dat?
 
-It is a flat, binary file containing bitcoin blockchain data starting from the
+It is a flat, binary file containing flokicoin blockchain data starting from the
 genesis block and continuing through a relatively recent block height depending
 on the last time it was updated.
 
-See [this](https://bitcointalk.org/index.php?topic=145386.0) thread on
-bitcointalk for more details.
+See [this](https://flokicointalk.org/index.php?topic=145386.0) thread on
+flokicointalk for more details.
 
 
 ### What are the pros and cons of using bootstrap.dat?
@@ -150,14 +154,14 @@ Cons:
 ### Where do I get bootstrap.dat?
 
 The bootstrap.dat file is made available via a torrent.  See
-[this](https://bitcointalk.org/index.php?topic=145386.0) thread on bitcointalk
+[this](https://flokicointalk.org/index.php?topic=145386.0) thread on flokicointalk
 for the torrent download details.
 
 ### How do I know I can trust the bootstrap.dat I downloaded?
 
 You don't need to trust the file as the `addblock` utility verifies every block
 using the same rules that are used when downloading the block chain normally
-through the Bitcoin protocol.  Additionally, the chain rules contain hard-coded
+through the Flokicoin protocol.  Additionally, the chain rules contain hard-coded
 checkpoints for the known-good block chain at periodic intervals.  This ensures
 that not only is it a valid chain, but it is the same chain that everyone else
 is using.
