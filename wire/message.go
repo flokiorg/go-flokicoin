@@ -434,6 +434,16 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, flcnet FlokicoinNet,
 		return totalBytes, nil, nil, err
 	}
 
+	// Reject messages where the payload was not fully consumed by
+	// FlcDecode. A peer could otherwise append arbitrary trailing bytes
+	// to an otherwise valid message, which would be silently accepted
+	// and persisted (e.g., in the block database).
+	if pr.Len() > 0 {
+		str := fmt.Sprintf("message payload has %d extra bytes "+
+			"after decode", pr.Len())
+		return totalBytes, nil, nil, messageError("ReadMessage", str)
+	}
+
 	return totalBytes, msg, payload, nil
 }
 
