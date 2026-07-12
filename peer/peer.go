@@ -2365,6 +2365,12 @@ func (p *Peer) WaitForDisconnect() {
 	<-p.quit
 }
 
+// Done returns a channel that is closed when the peer has been disconnected.
+// This allows callers to select on peer disconnect alongside other channels.
+func (p *Peer) Done() <-chan struct{} {
+	return p.quit
+}
+
 // newPeerBase returns a new base flokicoin peer based on the inbound flag.  This
 // is used by the NewInboundPeer and NewOutboundPeer functions to perform base
 // setup needed by both types of peers.
