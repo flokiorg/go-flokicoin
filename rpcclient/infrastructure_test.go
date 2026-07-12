@@ -322,8 +322,8 @@ func TestSendPostRequestWithRetrySuccess(t *testing.T) {
 	jReq := newPostTestRequest()
 
 	result, err := sendPostRequestWithRetry(
-		context.Background(), jReq, 1, client.httpClient, client.config,
-		false,
+		context.Background(), jReq, 1, client.httpClient,
+		client.config, client.httpURL, false,
 	)
 	require.NoError(t, err)
 	require.Equal(t, []byte("1"), result)
@@ -340,8 +340,8 @@ func TestSendPostRequestWithRetryShutdown(t *testing.T) {
 			jReq := newPostTestRequest()
 
 			result, err := sendPostRequestWithRetry(
-				ctx, jReq, tc.tries, client.httpClient, client.config,
-				false,
+				ctx, jReq, tc.tries, client.httpClient,
+				client.config, client.httpURL, false,
 			)
 			require.Nil(t, result)
 			require.ErrorIs(t, err, context.Canceled)
@@ -477,4 +477,294 @@ func TestSendPostRequestAndRespondShutdown(t *testing.T) {
 				atomic.LoadInt32(&attempts))
 		})
 	}
+}
+
+// TestHTTPURL pins down the URL strings produced by httpURL for each
+// supported host shape. httpURL runs on every RPC and now uses a
+// hand-rolled prefix check rather than delegating to ParseAddressString,
+// so its output is exercised directly here.
+func TestHTTPURL(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		host       string
+		disableTLS bool
+		expURL     string
+	}{
+		{
+			name:       "unix socket",
+			host:       "unix:///var/run/flokicoin/flokicoin.sock",
+			disableTLS: true,
+			expURL:     "http://unix",
+		},
+		{
+			name:       "unixpacket socket",
+			host:       "unixpacket:///var/run/flokicoin/flokicoin.sock",
+			disableTLS: true,
+			expURL:     "http://unix",
+		},
+		{
+			name:       "ipv4 literal",
+			host:       "127.0.0.1:8332",
+			disableTLS: true,
+			expURL:     "http://127.0.0.1:8332",
+		},
+		{
+			name:       "ipv6 literal",
+			host:       "[::1]:8332",
+			disableTLS: true,
+			expURL:     "http://[::1]:8332",
+		},
+		{
+			name:       "hostname",
+			host:       "localhost:8332",
+			disableTLS: true,
+			expURL:     "http://localhost:8332",
+		},
+		{
+			name:       "empty host",
+			host:       "",
+			disableTLS: true,
+			expURL:     "http://",
+		},
+		{
+			name:       "tls hostname",
+			host:       "flokicoind.example.com:8332",
+			disableTLS: false,
+			expURL:     "https://flokicoind.example.com:8332",
+		},
+		{
+			name:       "tls unix socket",
+			host:       "unix:///var/run/flokicoin/flokicoin.sock",
+			disableTLS: false,
+			expURL:     "https://unix",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &ConnConfig{
+				Host:       tc.host,
+				DisableTLS: tc.disableTLS,
+			}
+			require.Equal(t, tc.expURL, cfg.httpURL())
+		})
+	}
+}
+
+// TestHTTPURLWiring guards the construction-time wiring that copies
+// (*ConnConfig).httpURL onto Client.httpURL when HTTPPostMode is set.
+// TestHTTPURL covers the method itself; this test catches the case
+// where a refactor of New silently drops the assignment, leaving
+// Client.httpURL as the zero value.
+func TestHTTPURLWiring(t *testing.T) {
+	t.Parallel()
+
+	cfg := &ConnConfig{
+		Host:         "localhost:8332",
+		HTTPPostMode: true,
+		DisableTLS:   true,
+		User:         "user",
+		Pass:         "pass",
+	}
+	c, err := New(cfg, nil)
+	require.NoError(t, err)
+	defer c.Shutdown()
+
+	require.Equal(t, "http://localhost:8332", c.httpURL)
+}
+
+// TestSendPostRequestShutdownPrioritizesFailure ensures shutdown always wins
+// when it is already closed before sendPostRequest is called.
+func TestSendPostRequestShutdownPrioritizesFailure(t *testing.T) {
+	client := &Client{
+		sendPostChan: make(chan *jsonRequest, 1),
+		shutdown:     make(chan struct{}),
+	}
+
+	close(client.shutdown)
+
+	const attempts = 200
+	// The old single-select implementation chose randomly when both channels
+	// were ready, so repeat enough times to make an accidental enqueue show up.
+	for i := 0; i < attempts; i++ {
+		jReq := &jsonRequest{
+			id:           uint64(i),
+			method:       "getblockcount",
+			responseChan: make(chan *Response, 1),
+		}
+		client.sendPostRequest(jReq)
+
+		select {
+		case resp := <-jReq.responseChan:
+			require.ErrorIs(t, resp.err, ErrClientShutdown)
+		default:
+			t.Fatalf("request id=%d was not failed immediately",
+				jReq.id)
+		}
+
+		select {
+		case <-client.sendPostChan:
+			t.Fatalf("request id=%d was enqueued after shutdown",
+				jReq.id)
+
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
+// TestBatchSendErrorResolvesQueuedFutures ensures a batch send failure resolves
+// all queued futures instead of leaving them blocked.
+func TestBatchSendErrorResolvesQueuedFutures(t *testing.T) {
+	connCfg := &ConnConfig{
+		Host:         "127.0.0.1:8332",
+		User:         "user",
+		Pass:         "pass",
+		DisableTLS:   true,
+		HTTPPostMode: true,
+	}
+
+	client, err := NewBatch(connCfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		client.Shutdown()
+		client.WaitForShutdown()
+	})
+
+	client.httpClient.Transport = postRoundTripFunc(
+		func(*http.Request) (*http.Response, error) {
+			body := io.NopCloser(strings.NewReader("not-json"))
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       body,
+			}, nil
+		},
+	)
+
+	f1 := client.GetBlockCountAsync()
+	f2 := client.GetBlockCountAsync()
+
+	sendErr := client.Send()
+	require.Error(t, sendErr)
+
+	assertFutureErr := func(f FutureGetBlockCountResult) {
+		t.Helper()
+
+		done := make(chan error, 1)
+		// Receive is the blocking caller-facing path. The old bug surfaced here
+		// by never resolving the future, so bound it with a timeout.
+		go func() {
+			_, err := f.Receive()
+			done <- err
+		}()
+
+		select {
+		case err := <-done:
+			require.Error(t, err)
+			require.EqualError(t, err, sendErr.Error())
+
+		case <-time.After(2 * time.Second):
+			t.Fatal("timed out waiting for queued batch future " +
+				"to resolve")
+		}
+	}
+
+	assertFutureErr(f1)
+	assertFutureErr(f2)
+}
+
+// TestNewBatchSerializesPostSends ensures a batch client still serializes POST
+// sends through a single handler goroutine.
+func TestNewBatchSerializesPostSends(t *testing.T) {
+	connCfg := &ConnConfig{
+		Host:         "127.0.0.1:8332",
+		User:         "user",
+		Pass:         "pass",
+		DisableTLS:   true,
+		HTTPPostMode: true,
+	}
+
+	client, err := NewBatch(connCfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		client.Shutdown()
+		client.WaitForShutdown()
+	})
+
+	var active int32
+	var maxActive int32
+	release := make(chan struct{})
+
+	client.httpClient.Transport = postRoundTripFunc(
+		func(*http.Request) (*http.Response, error) {
+			current := atomic.AddInt32(&active, 1)
+			for {
+				prev := atomic.LoadInt32(&maxActive)
+				if current <= prev {
+					break
+				}
+				if atomic.CompareAndSwapInt32(
+					&maxActive, prev, current,
+				) {
+					break
+				}
+			}
+
+			// Hold the request open so the test can observe if
+			// a second POST enters the transport concurrently.
+			<-release
+			atomic.AddInt32(&active, -1)
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body: io.NopCloser(strings.NewReader(
+					`{"result":1,"error":null}`,
+				)),
+			}, nil
+		},
+	)
+
+	makeReq := func(id uint64) *jsonRequest {
+		return &jsonRequest{
+			id:     id,
+			method: "getblockcount",
+			marshalledJSON: []byte(
+				`{"jsonrpc":"1.0","id":1,` +
+					`"method":"getblockcount","params":[]}`,
+			),
+			responseChan: make(chan *Response, 1),
+		}
+	}
+
+	req1 := makeReq(1)
+	req2 := makeReq(2)
+	client.sendPostChan <- req1
+	client.sendPostChan <- req2
+
+	// Wait until one request is definitely in flight before checking whether
+	// a duplicate handler can start a second concurrent POST.
+	require.Eventually(t, func() bool {
+		return atomic.LoadInt32(&active) >= 1
+	}, time.Second, 5*time.Millisecond)
+
+	// Allow any extra send handler goroutines to start a second in-flight
+	// request.
+	time.Sleep(100 * time.Millisecond)
+	observedMax := atomic.LoadInt32(&maxActive)
+	close(release)
+
+	for i, req := range []*jsonRequest{req1, req2} {
+		select {
+		case resp := <-req.responseChan:
+			require.NoError(t, resp.err, "request %d failed", i)
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timed out waiting for request %d response", i)
+		}
+	}
+
+	require.EqualValues(t, 1, observedMax, "POST sends must be serialized")
 }
