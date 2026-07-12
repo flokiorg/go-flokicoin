@@ -190,6 +190,18 @@ type Params struct {
 	// These fields define the block heights at which the specified softfork
 	// BIP became active.
 	BIP0034Height int32
+
+	// BIP0034Hash is the hash of the block at BIP0034Height. When set, it
+	// lets bip0030CheckNeeded skip the (expensive) duplicate-coinbase check
+	// once the chain is known to have activated BIP0034 through that exact
+	// block, rather than merely reaching its height. Left nil for all of
+	// Flokicoin's current network params (no verified activation hash to
+	// populate it with) which keeps the BIP0030 check unconditionally
+	// enforced past BIP0034Height -- strictly more validation, never less,
+	// so this is safe by construction. See bip0030CheckNeeded in
+	// blockchain/validate.go.
+	BIP0034Hash *chainhash.Hash
+
 	BIP0065Height int32
 	BIP0066Height int32
 
