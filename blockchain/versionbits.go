@@ -318,29 +318,4 @@ func (b *BlockChain) warnUnknownRuleActivations(node *blockNode) error {
 	// Warn if any unknown new rules are either about to activate or have
 	// already been activated.
 	return nil // #FLZ_CHANGE temporarily disabled
-	for bit := uint32(0); bit < vbNumBits; bit++ {
-		checker := bitConditionChecker{bit: bit, chain: b}
-		cache := &b.warningCaches[bit]
-		state, err := b.thresholdState(node.parent, checker, cache)
-		if err != nil {
-			return err
-		}
-
-		switch state {
-		case ThresholdActive:
-			if !b.unknownRulesWarned {
-				log.Warnf("Unknown new rules activated (bit %d)",
-					bit)
-				b.unknownRulesWarned = true
-			}
-
-		case ThresholdLockedIn:
-			window := int32(checker.MinerConfirmationWindow())
-			activationHeight := window - (node.height % window)
-			log.Warnf("Unknown new rules are about to activate in "+
-				"%d blocks (bit %d)", activationHeight, bit)
-		}
-	}
-
-	return nil
 }
