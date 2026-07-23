@@ -2005,7 +2005,8 @@ func (b *BlockChain) ReconsiderBlock(hash *chainhash.Hash) error {
 	tips := b.index.InactiveTips(b.bestChain)
 	tips = append(tips, b.bestChain.Tip())
 
-	log.Debugf("Examining %v inactive chain tips for reconsideration")
+	log.Debugf("Examining %v inactive chain tips for reconsideration",
+		len(tips))
 
 	// Go through all the tips and unset the status for all the descendents of the
 	// block being reconsidered.
