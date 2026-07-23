@@ -21,7 +21,7 @@ import (
 
 // TestHaveBlock tests the HaveBlock API to ensure proper functionality.
 func TestHaveBlock(t *testing.T) {
-	return // #FLOKI_CHANGE  #TODO
+	t.Skip("disabled") // #FLOKI_CHANGE  #TODO
 
 	// Load up blocks such that there is a side chain.
 	// (genesis block) -> 1 -> 2 -> 3 -> 4

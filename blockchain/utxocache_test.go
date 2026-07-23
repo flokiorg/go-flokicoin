@@ -729,7 +729,7 @@ func TestFlushNeededAfterPrune(t *testing.T) {
 }
 
 func TestFlushOnPrune(t *testing.T) {
-	return // #FLOKI_CHANGE #TODO
+	t.Skip("disabled") // #FLOKI_CHANGE #TODO
 	chain, tearDown, err := chainSetup("TestFlushOnPrune", &chaincfg.MainNetParams)
 	if err != nil {
 		panic(fmt.Sprintf("error loading blockchain with database: %v", err))
@@ -850,7 +850,7 @@ func TestFlushOnPrune(t *testing.T) {
 }
 
 func TestInitConsistentState(t *testing.T) {
-	return // #FLOKI_CHANGE #TODO
+	t.Skip("disabled") // #FLOKI_CHANGE #TODO
 
 	//  Boilerplate for creating a chain.
 	dbName := "TestFlushOnPrune"
