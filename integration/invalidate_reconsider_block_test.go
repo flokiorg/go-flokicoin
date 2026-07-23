@@ -33,7 +33,7 @@ func TestInvalidateAndReconsiderBlock(t *testing.T) {
 
 	count, _ := r.Client.GetBlockCount()
 	t.Logf("count: %v", count)
-	return
+	t.Skip("invalidate/reconsider assertions below are disabled")
 
 	// Cache the active tip hash.
 	block4ActiveTipHash, err := r.Client.GetBestBlockHash()
