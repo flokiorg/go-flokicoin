@@ -135,7 +135,12 @@ func testMultiPartySign(t *testing.T, taprootTweak []byte,
 
 	// Next, in the pre-signing phase, we'll send all the nonces to each
 	// signer.
+	//
+	// t.Fatalf must only be called from the test's own goroutine, so
+	// errors from these worker goroutines are collected and reported
+	// after wg.Wait() instead.
 	var wg sync.WaitGroup
+	errs := make(chan error, len(signers)*len(signers))
 	for i, signCtx := range signers {
 		signCtx := signCtx
 
@@ -151,17 +156,22 @@ func testMultiPartySign(t *testing.T, taprootTweak []byte,
 				nonce := otherCtx.PublicNonce()
 				haveAll, err := signer.RegisterPubNonce(nonce)
 				if err != nil {
-					t.Fatalf("unable to add public nonce")
+					errs <- fmt.Errorf("unable to add public nonce")
+					return
 				}
 
 				if j == len(signers)-1 && !haveAll {
-					t.Fatalf("all public nonces should have been detected")
+					errs <- fmt.Errorf("all public nonces should have been detected")
+					return
 				}
 			}
 		}(i, signCtx)
 	}
-
 	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Fatal(err)
+	}
 
 	msg := sha256.Sum256([]byte("let's get taprooty"))
 
