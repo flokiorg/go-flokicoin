@@ -498,8 +498,6 @@ func mkAuxPow(t *testing.T, childHash chainhash.Hash, chainID int32, opts auxPow
 	}
 
 	return aph
-
-	return aph
 }
 
 // ---------------------------
