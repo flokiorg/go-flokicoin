@@ -1858,6 +1858,13 @@ func ParseAddressString(strAddress string) (net.Addr, error) {
 			strAddress)
 	}
 
+	// A bare IPv6 literal (no brackets, no port) is ambiguous as a URL
+	// authority and parses inconsistently across Go versions; bracket it
+	// so it's unambiguous before handing it to url.Parse.
+	if ip := net.ParseIP(strAddress); ip != nil && strings.Contains(strAddress, ":") {
+		strAddress = "[" + strAddress + "]"
+	}
+
 	// Parse it as a dummy URL to get the host and port.
 	u, err := url.Parse("dummy://" + strAddress)
 	if err != nil {
@@ -1880,12 +1887,13 @@ func verifyPort(address string) string {
 		}
 
 		// Otherwise, we'll assume that the address just failed to
-		// attach its own port, so we'll leave it as is. In the
+		// attach its own port, so we'll add an empty one. In the
 		// case of IPv6 addresses, if the host is already surrounded by
-		// brackets, then we'll avoid using the JoinHostPort function,
-		// since it will always add a pair of brackets.
+		// brackets, then we'll append the port directly instead of
+		// using the JoinHostPort function, since it will always add
+		// a second, redundant pair of brackets.
 		if strings.HasPrefix(address, "[") {
-			return address
+			return address + ":"
 		}
 		return net.JoinHostPort(address, "")
 	}
