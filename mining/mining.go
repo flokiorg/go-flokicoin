@@ -771,7 +771,7 @@ mempoolLoop:
 		txFees = append(txFees, prioItem.fee)
 		txSigOpCosts = append(txSigOpCosts, int64(sigOpCost))
 
-		log.Tracef("Adding tx %s (priority %.2f, feePerKB %.2f)",
+		log.Tracef("Adding tx %s (priority %.2f, feePerKB %d)",
 			prioItem.tx.Hash(), prioItem.priority, prioItem.feePerKB)
 
 		// Add transactions which depend on this one (and also do not
