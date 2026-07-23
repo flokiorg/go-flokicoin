@@ -348,7 +348,7 @@ out:
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
 				"template: %v", err)
-			log.Errorf(errStr)
+			log.Errorf("%s", errStr)
 			continue
 		}
 
@@ -602,7 +602,7 @@ func (m *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
 				"template: %v", err)
-			log.Errorf(errStr)
+			log.Errorf("%s", errStr)
 			continue
 		}
 
