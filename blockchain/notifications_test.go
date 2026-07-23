@@ -13,7 +13,7 @@ import (
 
 // TestNotifications ensures that notification callbacks are fired on events.
 func TestNotifications(t *testing.T) {
-	return // #FLOKI_CHANGE #TODO
+	t.Skip("disabled") // #FLOKI_CHANGE #TODO
 
 	blocks, err := loadBlocks("blk_0_to_4.dat.bz2", &chaincfg.MainNetParams)
 	if err != nil {
