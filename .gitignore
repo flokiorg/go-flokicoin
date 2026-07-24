@@ -58,3 +58,4 @@ chainutil/psbt/coverage.txt
 .gocache
 .test
 .com
+.agents/
