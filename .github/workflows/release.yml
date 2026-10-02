@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          Version to release (e.g. 0.26.2, no "v" prefix). Leave blank to use
+          the topmost "## [X.Y.Z]" heading in CHANGELOG.md.
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  # Required to push the release image to ghcr.io.
+  packages: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Same commands as ci.yaml. A release is never cut from a state that
+      # would not also pass CI.
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -timeout 20m ./...
+
+      # No git event triggers a release on its own (workflow_dispatch only) and
+      # GitHub never auto-generates the notes: they always come from
+      # CHANGELOG.md, maintained by hand as part of normal development.
+      - name: Resolve version and notes from CHANGELOG.md
+        id: changelog
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          VERSION="$VERSION_INPUT"
+          if [ -z "$VERSION" ]; then
+            TOP_HEADING=$(grep -m1 -oP '^## \[\K[^\]]+' CHANGELOG.md || true)
+            if [ "$TOP_HEADING" = "Unreleased" ]; then
+              echo "::error::Topmost CHANGELOG.md heading is '## [Unreleased]' - rename it to the version being released (e.g. '## [0.26.2]') and commit that before running this workflow, or pass the version input explicitly"
+              exit 1
+            fi
+            VERSION="$TOP_HEADING"
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not resolve a version: no version input given and no '## [X.Y.Z]' heading found in CHANGELOG.md"
+            exit 1
+          fi
+
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > /tmp/notes.raw
+
+          # Trim leading/trailing blank lines.
+          sed -e '/./,$!d' -e ':a' -e '/^\n*$/{$d;N;ba' -e '}' /tmp/notes.raw > /tmp/release-notes.md
+
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "::error::No changelog entry found for version $VERSION in CHANGELOG.md (heading missing or section is empty)"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$VERSION with notes:"
+          cat /tmp/release-notes.md
+
+      - name: Tag release
+        env:
+          VERSION: ${{ steps.changelog.outputs.version }}
+          ACTOR: ${{ github.actor }}
+          ACTOR_EMAIL: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+        run: |
+          git config user.name "$ACTOR"
+          git config user.email "$ACTOR_EMAIL"
+
+          # Re-running a release (e.g. after a failed GoReleaser step) should
+          # replace the existing tag rather than fail, both locally and on the
+          # remote.
+          git tag -d "v$VERSION" 2>/dev/null || true
+          git push origin ":refs/tags/v$VERSION" 2>/dev/null || true
+
+          # The tag's annotation is the same CHANGELOG.md section passed to
+          # --release-notes below, so any tool that reads the tag message
+          # instead still gets the real notes rather than a bare version string.
+          # --cleanup=verbatim matters: git's default strips every line
+          # beginning with "#", which would silently delete the markdown
+          # headings from the notes stored in the tag annotation.
+          git tag -a "v$VERSION" --cleanup=verbatim -F /tmp/release-notes.md
+          git push origin "v$VERSION"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        # Needed to build the linux/arm64 image on an amd64 runner.
+        uses: docker/setup-qemu-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          # Pinned to the major matching .goreleaser.yaml's `version: 2`, so a
+          # future GoReleaser release cannot change --release-notes behaviour
+          # out from under this workflow.
+          version: "~> v2"
+          args: release --clean --release-notes=/tmp/release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

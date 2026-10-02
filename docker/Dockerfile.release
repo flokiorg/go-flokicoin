@@ -1,0 +1,19 @@
+# Image used by the release workflow. Unlike docker/Dockerfile, this one does
+# not compile anything: GoReleaser has already cross-compiled the binaries and
+# runs `docker build` with dist/ as the context, so the binaries are simply
+# copied in. That keeps the published image and the published archives bit-for-bit
+# the same build.
+#
+# docker/Dockerfile stays as it is for building an image straight from a source
+# checkout.
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates
+
+COPY lokid /bin/lokid
+COPY lokid-cli /bin/lokid-cli
+
+# Flokicoin mainnet: 15212 P2P, 15213 RPC.
+EXPOSE 15212 15213
+
+ENTRYPOINT ["/bin/lokid"]

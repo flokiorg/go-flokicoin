@@ -1,5 +1,5 @@
 ARG ARCH=amd64
-FROM golang:1.23.4 AS builder
+FROM golang:1.26.5 AS builder
 
 ARG ARCH
 

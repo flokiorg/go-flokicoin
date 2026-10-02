@@ -2577,7 +2577,10 @@ func rpcNumericVersion() int32 {
 }
 
 func rpcSubVersionString() string {
-	subVersion := fmt.Sprintf("lokid:%d.%d.%d-%s", appMajor, appMinor, appPatch, appPreRelease)
+	subVersion := fmt.Sprintf("lokid:%d.%d.%d", appMajor, appMinor, appPatch)
+	if appPreRelease != "" {
+		subVersion = fmt.Sprintf("%s-%s", subVersion, appPreRelease)
+	}
 	if appBuild != "" {
 		subVersion = fmt.Sprintf("%s+%s", subVersion, appBuild)
 	}

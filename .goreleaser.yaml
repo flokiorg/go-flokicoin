@@ -1,0 +1,146 @@
+version: 2
+
+project_name: lokid
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  # appVersion is a plain var in each main package precisely so it can be set
+  # here; there are no hand-edited version constants left to drift out of step
+  # with the released tag. appBuild keeps the short commit, as the previous
+  # release tooling did.
+  - id: lokid
+    main: .
+    binary: lokid
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.appVersion={{ .Version }} -X main.appBuild={{ .ShortCommit }}
+    targets: &targets
+      - darwin_amd64
+      - darwin_arm64
+      - dragonfly_amd64
+      - freebsd_386
+      - freebsd_amd64
+      - freebsd_arm_6
+      - illumos_amd64
+      - linux_386
+      - linux_amd64
+      - linux_arm64
+      - linux_mips
+      - linux_mips64
+      - linux_mips64le
+      - linux_mipsle
+      - linux_ppc64
+      - linux_ppc64le
+      - netbsd_386
+      - netbsd_amd64
+      - netbsd_arm_6
+      - netbsd_arm64
+      - openbsd_386
+      - openbsd_amd64
+      - openbsd_arm_6
+      - openbsd_arm64
+      - solaris_amd64
+      - windows_386
+      - windows_amd64
+
+  - id: lokid-cli
+    main: ./cmd/lokid-cli
+    binary: lokid-cli
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.appVersion={{ .Version }} -X main.appBuild={{ .ShortCommit }}
+    targets: *targets
+
+archives:
+  # One archive per platform carrying both binaries, matching the asset names
+  # the previous tooling produced so existing download URLs keep their shape:
+  # lokid-<os>-<arch>-v<version>.tar.gz (.zip on Windows).
+  - id: lokid
+    ids:
+      - lokid
+      - lokid-cli
+    name_template: "lokid-{{ .Os }}-{{ .Arch }}-v{{ .Version }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
+
+# Hand-rolled per-arch builds stitched into one manifest, rather than
+# dockers_v2: the v2 pipe has produced intermittent "failed to calculate
+# checksum of ref" COPY failures in CI elsewhere in this org.
+dockers:
+  - id: lokid-amd64
+    ids:
+      - lokid
+      - lokid-cli
+    dockerfile: docker/Dockerfile.release
+    use: buildx
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source=https://github.com/flokiorg/go-flokicoin"
+
+  - id: lokid-arm64
+    ids:
+      - lokid
+      - lokid-cli
+    dockerfile: docker/Dockerfile.release
+    use: buildx
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source=https://github.com/flokiorg/go-flokicoin"
+
+docker_manifests:
+  - name_template: "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-amd64"
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-arm64"
+
+  # skip_push: auto leaves :latest alone for a pre-release, so `docker pull
+  # ghcr.io/flokiorg/go-flokicoin` can never resolve to an alpha or rc.
+  - name_template: "ghcr.io/flokiorg/go-flokicoin:latest"
+    skip_push: auto
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-amd64"
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-arm64"
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: flokiorg
+    name: go-flokicoin
+  # Re-running a release replaces the assets rather than erroring.
+  mode: replace
+  # A version with a pre-release suffix is published as a GitHub prerelease.
+  prerelease: auto
+
+# Deliberately no `changelog:` block. GoReleaser loads --release-notes through
+# the same pipe it uses for changelog generation, so disabling that pipe
+# silently publishes an empty release body. The notes come from CHANGELOG.md via
+# --release-notes in .github/workflows/release.yml.
