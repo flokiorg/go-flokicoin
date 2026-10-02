@@ -100,7 +100,10 @@ jobs:
           # The tag's annotation is the same CHANGELOG.md section passed to
           # --release-notes below, so any tool that reads the tag message
           # instead still gets the real notes rather than a bare version string.
-          git tag -a "v$VERSION" -F /tmp/release-notes.md
+          # --cleanup=verbatim matters: git's default strips every line
+          # beginning with "#", which would silently delete the markdown
+          # headings from the notes stored in the tag annotation.
+          git tag -a "v$VERSION" --cleanup=verbatim -F /tmp/release-notes.md
           git push origin "v$VERSION"
 
       - name: Set up Docker Buildx
