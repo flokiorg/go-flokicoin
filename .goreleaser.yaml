@@ -78,6 +78,56 @@ archives:
     files:
       - LICENSE
 
+# Hand-rolled per-arch builds stitched into one manifest, rather than
+# dockers_v2: the v2 pipe has produced intermittent "failed to calculate
+# checksum of ref" COPY failures in CI elsewhere in this org.
+dockers:
+  - id: lokid-amd64
+    ids:
+      - lokid
+      - lokid-cli
+    dockerfile: docker/Dockerfile.release
+    use: buildx
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source=https://github.com/flokiorg/go-flokicoin"
+
+  - id: lokid-arm64
+    ids:
+      - lokid
+      - lokid-cli
+    dockerfile: docker/Dockerfile.release
+    use: buildx
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source=https://github.com/flokiorg/go-flokicoin"
+
+docker_manifests:
+  - name_template: "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-amd64"
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-arm64"
+
+  # skip_push: auto leaves :latest alone for a pre-release, so `docker pull
+  # ghcr.io/flokiorg/go-flokicoin` can never resolve to an alpha or rc.
+  - name_template: "ghcr.io/flokiorg/go-flokicoin:latest"
+    skip_push: auto
+    image_templates:
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-amd64"
+      - "ghcr.io/flokiorg/go-flokicoin:{{ .Version }}-arm64"
+
 checksum:
   name_template: checksums.txt
 
