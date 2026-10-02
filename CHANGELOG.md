@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.26.3]
+
+### Changed
+
+- Built with Go 1.26.8, up from 1.26.5. govulncheck reported four reachable
+  standard-library vulnerabilities on 1.26.5 -- GO-2026-6218 (`net/url`),
+  GO-2026-6090 (`crypto/tls`), GO-2026-5972 (`encoding/asn1`) and GO-2026-5026
+  (`net/http`) -- all fixed in 1.26.6. It now reports none. 0.26.2 shipped
+  before this was noticed, so its binaries and image carry those four.
+- `docker/Dockerfile`'s builder image moved to 1.26.8 to match.
+
 ## [0.26.2]
 
 ### Fixed
