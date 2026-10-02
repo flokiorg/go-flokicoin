@@ -1,0 +1,57 @@
+name: Publish edge image
+
+# Every push to main gets an image, so there is something to run without
+# waiting for a release. These are explicitly not releases: the binaries report
+# the development version (0.0.0-dev) plus the commit, and :edge always moves.
+# Use a release tag for anything you care about.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    name: Build and push edge image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The Dockerfile copies prebuilt binaries, so build them into the
+      # directory used as the build context.
+      - name: Build linux/amd64 binaries
+        env:
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          mkdir -p dist
+          LD="-s -w -X main.appBuild=$(git rev-parse --short HEAD)"
+          go build -trimpath -ldflags "$LD" -o dist/lokid .
+          go build -trimpath -ldflags "$LD" -o dist/lokid-cli ./cmd/lokid-cli
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: dist
+          file: docker/Dockerfile.release
+          push: true
+          tags: |
+            ghcr.io/flokiorg/go-flokicoin:edge
+            ghcr.io/flokiorg/go-flokicoin:${{ github.sha }}
