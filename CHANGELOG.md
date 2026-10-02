@@ -9,13 +9,13 @@
   its version from hand-edited constants that were never bumped. The version is
   now taken from the release tag at build time, and the numeric components, the
   P2P user agent and the `/lokid:.../` RPC sub-version string are all derived
-  from it, so there is nothing left to drift.
+  from it, so there is nothing left to drift. (#13)
 - The RPC sub-version string no longer ends in a stray hyphen when the version
-  carries no pre-release label.
+  carries no pre-release label. (#13)
 
 ### Changed
 
-- Built with Go 1.26.5.
+- Built with Go 1.26.5. (#11)
 
 ## [0.26.1-alpha]
 
