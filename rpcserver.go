@@ -892,12 +892,38 @@ func handleDecodeScript(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 	return reply, nil
 }
 
-// handleEstimateFee handles estimatefee commands.
+// handleEstimateFee handles estimatefee commands. It answers with the fee rate
+// in FLC per kilobyte as a plain number, the form btcd's estimatefee returns and
+// flnd's btcd-backend fee estimator reads.
 func handleEstimateFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	return handleEstimateSmartFee(s, cmd, closeChan)
+	c := cmd.(*chainjson.EstimateFeeCmd)
+
+	if s.cfg.FeeEstimator == nil {
+		return nil, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCInternal.Code,
+			Message: "fee estimation disabled",
+		}
+	}
+
+	if c.NumBlocks <= 0 {
+		return -1.0, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCInternal.Code,
+			Message: "parameter NumBlocks must be positive",
+		}
+	}
+
+	feeRate, err := s.cfg.FeeEstimator.EstimateFee(uint32(c.NumBlocks))
+	if err != nil {
+		return -1.0, &chainjson.RPCError{
+			Code:    chainjson.ErrRPCInternal.Code,
+			Message: err.Error(),
+		}
+	}
+
+	return float64(feeRate), nil
 }
 
-// handleEstimateSmartFee handles estimatefee commands.
+// handleEstimateSmartFee handles estimatesmartfee commands.
 func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*chainjson.EstimateSmartFeeCmd)
 

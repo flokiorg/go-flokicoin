@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.26.4]
+
+### Fixed
+
+- The `estimatefee` RPC no longer crashes `lokid`: it answered through the `estimatesmartfee`
+  handler, which panicked on its command type. It now returns the fee rate in FLC per kilobyte, as
+  Lightning nodes using `lokid` as their chain backend expect.
+
 ## [0.26.3]
 
 ### Changed
