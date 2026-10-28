@@ -6,12 +6,12 @@
 
 - The `estimatefee` RPC no longer crashes `lokid`: it answered through the `estimatesmartfee`
   handler, which panicked on its command type. It now returns the fee rate in FLC per kilobyte, as
-  Lightning nodes using `lokid` as their chain backend expect.
+  Lightning nodes using `lokid` as their chain backend expect. (#15)
 
 ### Added
 
 - `--keepregtestdb` keeps the regression test block database across restarts instead of deleting it on
-  start, so a regtest chain survives a restart of `lokid`.
+  start, so a regtest chain survives a restart of `lokid`. (#15)
 
 ## [0.26.3]
 
