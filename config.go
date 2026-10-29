@@ -152,6 +152,7 @@ type config struct {
 	ProxyUser            string        `long:"proxyuser" description:"Username for proxy server"`
 	Prune                uint64        `long:"prune" description:"Prune already validated blocks from the database. Must specify a target size in MiB (minimum value of 1536, default value of 0 will disable pruning)"`
 	RegressionTest       bool          `long:"regtest" description:"Use the regression test network"`
+	KeepRegTestDB        bool          `long:"keepregtestdb" description:"Keep the regression test block database across restarts instead of deleting it on start"`
 	RejectNonStd         bool          `long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
 	RejectReplacement    bool          `long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
 	RelayNonStd          bool          `long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`

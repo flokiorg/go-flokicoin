@@ -286,10 +286,10 @@ func fmain(serverChan chan<- *server) error {
 }
 
 // removeRegressionDB removes the existing regression test database if running
-// in regression test mode and it already exists.
+// in regression test mode and it already exists, unless --keepregtestdb is set.
 func removeRegressionDB(dbPath string) error {
-	// Don't do anything if not in regression test mode.
-	if !cfg.RegressionTest {
+	// Don't do anything if not in regression test mode, or if asked to keep it.
+	if !cfg.RegressionTest || cfg.KeepRegTestDB {
 		return nil
 	}
 
